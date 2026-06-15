@@ -254,21 +254,152 @@ Recording Aggregate
 
 
 7.5 Entity Relationships
-User
- ↓
-Enrollment
- ↓
-Course
- ↓
-Class
- ↓
-Meeting
- ↓
-AttendanceSession
- ↓
-AttendanceRecord
- ↓
-ConnectionMetric
+
+```mermaid
+classDiagram
+    class User {
+        +UUID id
+        +String email
+        +String passwordHash
+        +String fullName
+        +String avatarUrl
+        +String status
+        +DateTime createdAt
+        +DateTime updatedAt
+    }
+    class Role {
+        +UUID id
+        +String name
+    }
+    class Permission {
+        +UUID id
+        +String resource
+        +String action
+    }
+    class Course {
+        +UUID id
+        +String code
+        +String title
+        +String status
+        +UUID createdBy
+        +DateTime createdAt
+    }
+    class Class {
+        +UUID id
+        +UUID courseId
+        +String name
+        +DateTime startDate
+        +DateTime endDate
+    }
+    class Enrollment {
+        +UUID id
+        +UUID userId
+        +UUID courseId
+        +UUID classId
+        +String status
+        +DateTime enrolledAt
+    }
+    class Schedule {
+        +UUID id
+        +UUID classId
+        +DateTime scheduledAt
+        +Integer durationMinutes
+        +String status
+    }
+    class Material {
+        +UUID id
+        +UUID courseId
+        +String title
+        +String fileUrl
+        +String fileType
+        +Long fileSizeBytes
+        +DateTime uploadedAt
+    }
+    class Meeting {
+        +UUID id
+        +UUID classId
+        +String title
+        +String meetingCode
+        +String status
+        +DateTime scheduledAt
+        +DateTime startedAt
+        +DateTime endedAt
+    }
+    class Participant {
+        +UUID id
+        +UUID meetingId
+        +UUID userId
+        +DateTime joinedAt
+        +DateTime leftAt
+        +String role
+        +String connectionStatus
+    }
+    class AttendanceSession {
+        +UUID id
+        +UUID meetingId
+        +DateTime startedAt
+        +DateTime endedAt
+    }
+    class AttendanceRecord {
+        +UUID id
+        +UUID attendanceSessionId
+        +UUID userId
+        +DateTime joinedAt
+        +DateTime leftAt
+        +Integer durationSeconds
+        +Float attendancePercentage
+        +String attendanceStatus
+    }
+    class ConnectionMetric {
+        +UUID id
+        +UUID meetingId
+        +UUID participantId
+        +Float latency
+        +Float packetLoss
+        +Float jitter
+        +Float fps
+        +Float bitrate
+        +DateTime collectedAt
+    }
+    class Recording {
+        +UUID id
+        +UUID meetingId
+        +String filePath
+        +Integer durationSeconds
+        +Long fileSizeBytes
+        +String status
+        +DateTime createdAt
+    }
+    class Alert {
+        +UUID id
+        +UUID meetingId
+        +UUID participantId
+        +String type
+        +String severity
+        +String status
+        +DateTime raisedAt
+    }
+
+    User "1" --> "*" Role : has
+    Role "1" --> "*" Permission : grants
+    User "1" --> "*" Enrollment : enrolls
+    Course "1" --> "*" Class : contains
+    Course "1" --> "*" Material : has
+    Course "1" --> "*" Enrollment : for
+    Class "1" --> "*" Schedule : has
+    Class "1" --> "*" Meeting : hosts
+    Class "1" --> "*" Enrollment : for
+    Meeting "1" --> "*" Participant : includes
+    Meeting "1" --> "1" AttendanceSession : tracks
+    Meeting "1" --> "0..1" Recording : has
+    Meeting "1" --> "*" Alert : triggers
+    AttendanceSession "1" --> "*" AttendanceRecord : contains
+    User "1" --> "*" AttendanceRecord : has
+    Participant "1" --> "*" ConnectionMetric : generates
+```
+
+**Text summary:**
+User → Enrollment → Course → Class → Meeting → AttendanceSession → AttendanceRecord → ConnectionMetric
 
 
 7.6 Entity Ownership Rules

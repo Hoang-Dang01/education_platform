@@ -52,49 +52,40 @@ WebRTC SFU
 
 
 5. Sequence Diagram
-User
- │
- │ Join Meeting
- ▼
-API Gateway
- │
- │ Validate JWT
- ▼
-Auth Service
- │
- │ Get User
- ▼
-User Service
- │
- │ User Valid
- ▼
-Meeting Service
- │
- │ Get Meeting
- │
- │ Check Permission
- │
- │ Create Participant
- │
- │ Save Participant
- ▼
-Database
- │
- │ Publish ParticipantJoined
- ▼
-Message Broker
- │
- ├── Attendance Service
- ├── Analytics Service
- └── Monitoring Service
- │
- │ Generate Signaling Token
- ▼
-WebRTC SFU
- │
- │ Return ICE Servers
- ▼
-User
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant GW as API Gateway
+    participant Auth as Auth Service
+    participant Mtg as Meeting Service
+    participant Att as Attendance Service
+    participant Ana as Analytics Service
+    participant MB as Message Broker
+    participant SFU as WebRTC SFU
+    participant DB as Database
+
+    User->>GW: POST /api/v1/meetings/{id}/join
+    GW->>Auth: validate JWT
+    Auth-->>GW: user valid {userId, role}
+    GW->>Mtg: join meeting {userId, meetingId}
+    Mtg->>DB: load meeting + check membership
+    DB-->>Mtg: meeting data
+    Mtg->>DB: INSERT participants (joined_at)
+    Mtg->>MB: publish ParticipantJoined
+    Mtg->>SFU: generate signaling token
+    SFU-->>Mtg: iceServers, signalingToken
+    Mtg-->>GW: {participantId, signalingToken, iceServers}
+    GW-->>User: 200 OK
+
+    par async consumers
+        MB-->>Att: ParticipantJoined
+        Att->>DB: INSERT attendance_record (joined_at=server_ts)
+    and
+        MB-->>Ana: ParticipantJoined
+        Ana->>Ana: start metric collection
+    end
+```
 
 
 6. Detailed Steps
@@ -373,25 +364,37 @@ Dashboard
 
 
 5. Sequence Diagram
-Participant Joined
-        ↓
-Meeting Service
-        ↓
-Publish ParticipantJoined
-        ↓
-Message Broker
-        ↓
-Attendance Service
-        ↓
-Create Attendance Record
-        ↓
-Database
-        ↓
-Publish AttendanceRecorded
-        ↓
-Analytics Service
-        ↓
-Dashboard
+
+```mermaid
+sequenceDiagram
+    participant Mtg as Meeting Service
+    participant MB as Message Broker
+    participant Att as Attendance Service
+    participant Ana as Analytics Service
+    participant DB as Database
+
+    Note over Mtg,DB: --- JOIN flow ---
+    Mtg->>MB: publish ParticipantJoined {userId, meetingId, serverTimestamp}
+    MB->>Att: consume ParticipantJoined
+    Att->>DB: load AttendanceSession
+    Att->>DB: INSERT attendance_records (joined_at=serverTimestamp)
+    Att->>MB: publish AttendanceRecorded
+    MB->>Ana: consume AttendanceRecorded
+    Ana->>Ana: update dashboard metrics
+
+    Note over Mtg,DB: --- DISCONNECT / RECONNECT flow ---
+    Mtg->>MB: publish ParticipantLeft (or Disconnected)
+    MB->>Att: consume ParticipantLeft
+    Att->>DB: UPDATE attendance_records (left_at, duration_seconds)
+    Att->>Att: calculate attendance_percentage
+    Att->>MB: publish AttendanceCompleted
+
+    Note over Mtg,DB: --- Meeting end: close open records ---
+    Mtg->>MB: publish MeetingEnded
+    MB->>Att: consume MeetingEnded
+    Att->>DB: close all open AttendanceRecords (left_at=meeting.ended_at)
+    Att->>DB: finalize AttendanceSession
+```
 
 
 6. Detailed Steps
@@ -699,21 +702,38 @@ Alerts
 
 
 5. Sequence Diagram
-WebRTC Client
-      ↓
-MetricCollected
-      ↓
-Analytics Service
-      ↓
-Store Metrics
-      ↓
-Aggregate Metrics
-      ↓
-Update Dashboard
-      ↓
-Monitoring Service
-      ↓
-Alerts
+
+```mermaid
+sequenceDiagram
+    actor Client as Client (Student/Teacher)
+    participant GW as API Gateway
+    participant Ana as Analytics Service
+    participant Mon as Monitoring Service
+    participant MB as Message Broker
+    participant DB as Database
+    actor Admin
+
+    loop every 5 seconds
+        Client->>GW: POST /analytics/metrics {latency, packetLoss, jitter, fps, bitrate}
+        GW->>Ana: ingest metric
+        Ana->>DB: INSERT connection_metrics
+        Ana->>Ana: evaluate vs thresholds
+        alt metric vượt ngưỡng
+            Ana->>Mon: raise alert {type, severity}
+            Mon->>MB: publish AlertRaised
+        end
+        Ana->>MB: publish MetricCollected
+        Ana->>DB: UPDATE dashboard_metrics (aggregate)
+        Ana-->>GW: 204 No Content
+    end
+
+    Admin->>GW: GET /monitoring/dashboard
+    GW->>Mon: get dashboard
+    Mon->>DB: query current metrics & active alerts
+    DB-->>Mon: data
+    Mon-->>GW: {classes, participants, alerts, qualityStats}
+    GW-->>Admin: 200 OK
+```
 
 
 6. Detailed Flow
@@ -1015,25 +1035,55 @@ Notification
 
 
 5. Sequence Diagram
-Instructor
-      ↓
-Start Recording
-      ↓
-Meeting Service
-      ↓
-Recording Service
-      ↓
-WebRTC SFU
-      ↓
-Media Stream
-      ↓
-Recording File
-      ↓
-Object Storage
-      ↓
-Database
-      ↓
-Notification Service
+
+```mermaid
+sequenceDiagram
+    actor Teacher
+    participant GW as API Gateway
+    participant Mtg as Meeting Service
+    participant Rec as Recording Service
+    participant SFU as WebRTC SFU
+    participant Store as Object Storage
+    participant MB as Message Broker
+    participant Notif as Notification Service
+    participant DB as Database
+
+    Note over Teacher,DB: --- Start Recording ---
+    Teacher->>GW: POST /meetings/{id}/recording/start
+    GW->>Mtg: authorize Host role
+    Mtg->>Rec: start recording {meetingId}
+    Rec->>DB: check quota (< 10 GB)
+    DB-->>Rec: quota OK
+    Rec->>SFU: subscribe audio + video streams
+    SFU-->>Rec: media stream
+    Rec->>DB: INSERT recordings (status=IN_PROGRESS)
+    Rec->>MB: publish RecordingStarted
+    Rec-->>GW: {recordingId}
+    GW-->>Teacher: 200 OK
+
+    Note over Teacher,DB: ... buổi học diễn ra ...
+
+    Note over Teacher,DB: --- Stop Recording ---
+    Teacher->>GW: POST /meetings/{id}/recording/stop
+    GW->>Rec: stop recording
+    Rec->>Rec: merge streams + transcode → MP4 H.264
+    Rec->>Store: upload file
+    Store-->>Rec: fileUrl
+    Rec->>DB: UPDATE recordings (filePath, durationSeconds, status=COMPLETED)
+    Rec->>MB: publish RecordingCompleted
+    MB->>Notif: consume RecordingCompleted
+    Notif->>Teacher: push "Recording is ready"
+    Rec-->>GW: {recordingId, playbackUrl}
+    GW-->>Teacher: 200 OK
+
+    Note over Teacher,DB: --- Playback ---
+    Teacher->>GW: GET /recordings/{id}/playback
+    GW->>Rec: get playback URL
+    Rec->>Store: generate Presigned URL (TTL 1h)
+    Store-->>Rec: signedUrl
+    Rec-->>GW: {playbackUrl, expiresIn: 3600}
+    GW-->>Teacher: 200 OK
+```
 
 
 6. Start Recording Flow

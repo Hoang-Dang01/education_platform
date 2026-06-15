@@ -99,3 +99,21 @@ education-platform/
         ├── 13-testing-design.md           # Thiết kế và kế hoạch kiểm thử hệ thống
         └── 14-traceability-matrix.md      # Ma trận truy vết yêu cầu (Requirement Traceability Matrix)
 ```
+
+---
+
+## Trạng thái triển khai tài liệu (Documentation Progress Status)
+
+Dưới đây là bảng theo dõi tiến độ hoàn thiện của từng thư mục tài liệu trong dự án:
+
+| Thư mục tài liệu | Trạng thái | Mức độ hoàn thiện | Ghi chú |
+| :--- | :---: | :---: | :--- |
+| **Business Requirement Document (BRD)** | ✅ Hoàn thành | 100% | Đặc tả đầy đủ yêu cầu nghiệp vụ cho 9 phân hệ |
+| **Software Requirement Specification (SRS)** | ✅ Hoàn thành | 100% | Đã đóng phase Requirements & kiểm tra tính nhất quán |
+| **Technical Requirement Document (TRD)** | ✅ Hoàn thành | 100% | Đã hoàn thành thiết kế kiến trúc đề xuất |
+| **Solution Architecture Document (SAD)** | ✅ Hoàn thành | 100% | Đã hoàn thành tài liệu kiến trúc giải pháp |
+| **Technical Design Document (TDD)** | ✅ Hoàn thành | 100% | Đã tích hợp sơ đồ Mermaid Sequence & Class trực quan |
+| **User Stories & Use Cases** | ✅ Hoàn thành | 100% | Đã chốt đặc tả Use Cases và danh mục User Stories BDD |
+| **Design & Process Workflows** | ✅ Hoàn thành | 100% | Đã hoàn thành sơ đồ BPMN & Wireframes |
+| **Data Mapping** | ✅ Hoàn thành | 100% | Đã hoàn thành ERD & Chiến lược di chuyển dữ liệu |
+
