@@ -1,0 +1,28 @@
+# Directories to ignore
+.git/
+node_modules/
+dist/
+build/
+bin/
+obj/
+out/
+tmp/
+temp/
+logs/
+.gemini/
+brain/
+artifacts/
+
+# File types to ignore
+*.exe
+*.dll
+*.so
+*.zip
+*.tar.gz
+*.log
+*.sqlite
+*.db
+*.mp4
+*.pdf
+*.zip
+*.rar
