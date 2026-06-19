@@ -1,25 +1,49 @@
-import React, { useState } from 'react';
-import { Download, CheckCircle2, Clock } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Download, CheckCircle2, Clock, ArrowLeft } from 'lucide-react';
 import { mockReportSessions } from '../lib/mockData';
-import type { MockReportSession } from '../lib/mockData';
+import { getSessionReports } from '../lib/localDb';
+import type { SessionReport } from '../lib/localDb';
 import './Pages.css';
 
 export const ReportsPage: React.FC = () => {
-  const [selectedSession, setSelectedSession] = useState<MockReportSession | null>(null);
-  const reportSessions = mockReportSessions;
+  const [selectedSession, setSelectedSession] = useState<SessionReport | null>(null);
+  const [reports, setReports] = useState<SessionReport[]>([]);
 
+  useEffect(() => {
+    const local = getSessionReports();
+    
+    const mockReportsMapped: SessionReport[] = mockReportSessions.map((m: any) => ({
+      id: m.id,
+      roomName: m.roomName,
+      date: m.date,
+      presentStudents: m.presentStudents,
+      totalStudents: m.totalStudents,
+      avgDurationMins: m.avgDurationMins,
+      avgConnectionQuality: m.avgConnectionQuality,
+      details: m.details.map((d: any) => ({
+        name: d.name,
+        role: d.role,
+        presentTimeMins: d.presentTimeMins,
+        totalTimeMins: d.totalTimeMins,
+        pct: d.pct,
+        telemetry: d.telemetry
+      }))
+    }));
 
-  const getQualityText = (quality: MockReportSession['avgConnectionQuality']) => {
+    setReports([...local, ...mockReportsMapped]);
+  }, []);
+
+  const getQualityText = (quality: SessionReport['avgConnectionQuality']) => {
     switch (quality) {
       case 'excellent': return 'Xuất sắc';
       case 'good': return 'Khá';
       case 'poor': return 'Kém';
       case 'critical': return 'Nghiêm trọng';
+      default: return 'Khá';
     }
   };
 
   const getTelemetryStatus = (ping: number, loss: number, jitter: number) => {
-    // Adheres to 4-level telemetry specs from BRD
     if (loss < 2 && ping < 150 && jitter < 15) {
       return { label: 'Excellent', color: 'text-success' };
     }
@@ -32,10 +56,42 @@ export const ReportsPage: React.FC = () => {
     return { label: 'Good', color: 'text-primary' };
   };
 
+  const handleExportCSV = (session: SessionReport) => {
+    const headers = ['Học viên', 'Vai trò', 'Thời lượng tham gia (phút)', 'Tỷ lệ (%)', 'Độ trễ Ping (ms)', 'Jitter (ms)', 'Tỷ lệ mất gói (%)', 'Chất lượng kết nối'];
+    const rows = session.details.map(d => {
+      const telStatus = getTelemetryStatus(d.telemetry.ping, d.telemetry.loss, d.telemetry.jitter);
+      return [
+        `"${d.name.replace(/"/g, '""')}"`,
+        `"${d.role}"`,
+        d.presentTimeMins,
+        d.pct,
+        d.telemetry.ping,
+        d.telemetry.jitter,
+        d.telemetry.loss,
+        `"${telStatus.label}"`
+      ];
+    });
+
+    let csvContent = '\uFEFF'; 
+    csvContent += headers.join(',') + '\n';
+    csvContent += rows.map(r => r.join(',')).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Bao_cao_diem_danh_${session.roomName.replace(/\s+/g, '_')}_${session.date.replace(/\//g, '-')}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   if (selectedSession) {
     return (
       <div className="page-container session-report-page animate-fade-in">
         <button onClick={() => setSelectedSession(null)} className="back-btn glass-panel">
+          <ArrowLeft size={16} />
           <span>Quay lại</span>
         </button>
 
@@ -47,7 +103,7 @@ export const ReportsPage: React.FC = () => {
           <div className="session-summary-pills">
             <div className="summary-pill">
               <CheckCircle2 size={14} className="text-success" />
-              <span>Chuyên cần: {selectedSession.presentStudents}/{selectedSession.totalStudents}</span>
+              <span>Chuyên cần: {selectedSession.presentStudents}/{selectedSession.totalStudents} học viên</span>
             </div>
             <div className="summary-pill">
               <Clock size={14} className="text-primary" />
@@ -59,9 +115,9 @@ export const ReportsPage: React.FC = () => {
         <section className="reports-section glass-panel">
           <div className="reports-section-header">
             <h3>Chi tiết Chuyên cần & Telemetry Mạng</h3>
-            <button className="export-btn-full">
+            <button className="export-btn-full" onClick={() => handleExportCSV(selectedSession)}>
               <Download size={14} />
-              <span>Tải Báo Cáo XLS</span>
+              <span>Tải Báo Cáo CSV</span>
             </button>
           </div>
 
@@ -118,7 +174,7 @@ export const ReportsPage: React.FC = () => {
   return (
     <div className="page-container reports-page animate-fade-in">
       <div className="reports-list">
-        {reportSessions.map(session => (
+        {reports.map(session => (
           <div
             key={session.id}
             className="session-report-card glass-panel"
@@ -142,6 +198,9 @@ export const ReportsPage: React.FC = () => {
             </div>
           </div>
         ))}
+        {reports.length === 0 && (
+          <div className="no-materials">Không có báo cáo buổi học nào được ghi nhận.</div>
+        )}
       </div>
     </div>
   );

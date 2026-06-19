@@ -9,20 +9,38 @@ import './Pages.css';
 const ALL_ROLES: UserRole[] = ['admin', 'manager', 'teacher', 'student'];
 
 export const UserManagementPage: React.FC = () => {
-  const [users, setUsers] = useState<MockUser[]>(mockUsers);
+  const [users, setUsers] = useState<MockUser[]>(() => {
+    try {
+      const stored = localStorage.getItem('edumeet_users');
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch (e) {
+      console.error('Error loading users from localStorage:', e);
+    }
+    // Khởi tạo danh sách người dùng mẫu trong localStorage nếu chưa tồn tại
+    localStorage.setItem('edumeet_users', JSON.stringify(mockUsers));
+    return mockUsers;
+  });
   const [query, setQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<UserRole | 'all'>('all');
 
   const changeRole = (id: string, role: UserRole) => {
-    setUsers(prev => prev.map(u => (u.id === id ? { ...u, role } : u)));
+    setUsers(prev => {
+      const next = prev.map(u => (u.id === id ? { ...u, role } : u));
+      localStorage.setItem('edumeet_users', JSON.stringify(next));
+      return next;
+    });
   };
 
   const toggleStatus = (id: string) => {
-    setUsers(prev =>
-      prev.map(u =>
-        u.id === id ? { ...u, status: u.status === 'active' ? 'suspended' : 'active' } : u
-      )
-    );
+    setUsers(prev => {
+      const next = prev.map(u =>
+        u.id === id ? { ...u, status: (u.status === 'active' ? 'suspended' : 'active') as 'active' | 'suspended' } : u
+      );
+      localStorage.setItem('edumeet_users', JSON.stringify(next));
+      return next;
+    });
   };
 
   const filtered = useMemo(() => {

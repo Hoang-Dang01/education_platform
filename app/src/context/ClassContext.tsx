@@ -5,6 +5,8 @@ import type { UserRole } from '../lib/roles';
 import { roleFromJitsi, isInstructor } from '../lib/roles';
 import { getDeviceInfo } from '../lib/deviceInfo';
 import type { DeviceType, NetworkType } from '../lib/mockData';
+import { saveSessionReport } from '../lib/localDb';
+import type { SessionReport } from '../lib/localDb';
 
 // Bật chế độ mock (không gọi Jitsi) khi URL có ?mock=true — phục vụ demo/kiểm thử
 const isMockMode = () =>
@@ -121,6 +123,7 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
   const [roomName, setRoomName] = useState('');
   const [userName, setUserName] = useState('');
+  const [sessionStartTime, setSessionStartTime] = useState<number>(0);
   const [role, setRole] = useState<UserRole>('student');
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isVideoMuted, setIsVideoMuted] = useState(false);
@@ -193,6 +196,7 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setUserName(name);
     setRole(userRole);
     setScreen('classroom');
+    setSessionStartTime(Date.now());
 
     // Create local user participant immediately (kèm thông tin thiết bị/mạng — không cần chờ Jitsi)
     const localDevice = getDeviceInfo();
@@ -439,6 +443,59 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const leaveRoom = () => {
     console.log('Leaving Jitsi room...');
+
+    // Tự động tổng hợp kết quả và lưu vào LocalStorage trước khi thoát
+    if (roomName && participants.length > 0) {
+      const elapsedSeconds = Math.max(1, Math.round((Date.now() - sessionStartTime) / 1000));
+      const totalTimeMins = Math.max(1, Math.ceil(elapsedSeconds / 60));
+      const students = participants.filter(p => p.role === 'student');
+      const avgDurationMins = students.length > 0
+        ? Math.round(students.reduce((acc, curr) => acc + Math.ceil(curr.activeTimeSeconds / 60), 0) / students.length)
+        : totalTimeMins;
+
+      const qualities = participants.map(p => p.connectionQuality);
+      let avgConnectionQuality: SessionReport['avgConnectionQuality'] = 'excellent';
+      const counts = { excellent: 0, good: 0, poor: 0, critical: 0 };
+      qualities.forEach(q => counts[q] = (counts[q] || 0) + 1);
+      if (counts.critical > 0) {
+        avgConnectionQuality = 'critical';
+      } else if (counts.poor > 0) {
+        avgConnectionQuality = 'poor';
+      } else if (counts.good > 0) {
+        avgConnectionQuality = 'good';
+      }
+
+      const today = new Date();
+      const dateStr = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
+
+      const details = participants.map(p => ({
+        name: p.name,
+        role: p.role === 'teacher' ? 'Giáo viên' : p.role === 'student' ? 'Học sinh' : p.role === 'manager' ? 'Quản lý' : 'Admin',
+        presentTimeMins: Math.min(totalTimeMins, Math.max(1, Math.ceil(p.activeTimeSeconds / 60))),
+        totalTimeMins: totalTimeMins,
+        pct: totalTimeMins > 0 ? Math.round((Math.min(totalTimeMins, Math.max(1, Math.ceil(p.activeTimeSeconds / 60))) / totalTimeMins) * 100) : 100,
+        telemetry: {
+          ping: p.latency ?? 25,
+          jitter: p.jitter ?? 3,
+          loss: p.packetLoss ?? 0.1
+        }
+      }));
+
+      const report: SessionReport = {
+        id: 'report-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+        roomName: roomName,
+        date: dateStr,
+        presentStudents: students.length,
+        totalStudents: students.length,
+        avgDurationMins: Math.min(totalTimeMins, avgDurationMins),
+        avgConnectionQuality: avgConnectionQuality,
+        details: details
+      };
+
+      saveSessionReport(report);
+      console.log('Session report saved to local storage:', report);
+    }
+
     jitsiService.disconnect();
 
     // Dừng luồng chia sẻ màn hình nếu đang bật
