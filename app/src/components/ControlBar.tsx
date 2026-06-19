@@ -10,7 +10,9 @@ import {
   MessageSquare,
   Users,
   PhoneOff,
+  Loader2,
 } from 'lucide-react';
+import { isInstructor } from '../lib/roles';
 import './ControlBar.css';
 
 export const ControlBar: React.FC = () => {
@@ -18,13 +20,16 @@ export const ControlBar: React.FC = () => {
     isAudioMuted,
     isVideoMuted,
     isScreenSharing,
+    shareApprovalPending,
+    shareApproved,
     isHandRaised,
     chatOpen,
     panelOpen,
     activeTab,
+    role,
     toggleAudio,
     toggleVideo,
-    toggleScreenShare,
+    requestScreenShare,
     toggleHandRaise,
     toggleChat,
     togglePanel,
@@ -32,7 +37,35 @@ export const ControlBar: React.FC = () => {
     leaveRoom,
     raiseHandQueue,
     participants,
+    screenSharingUserId,
+    screenStream,
   } = useClass();
+
+  const canShareDirectly = isInstructor(role);
+  const isLocalSharing = screenSharingUserId === 'local-user' || screenStream !== null;
+
+  // Nhãn nút share theo vai trò & trạng thái
+  const shareTitle = isLocalSharing
+    ? 'Dừng Trình Chiếu'
+    : isScreenSharing
+      ? 'Người khác đang trình chiếu...'
+      : shareApprovalPending
+        ? 'Đang chờ giảng viên duyệt...'
+        : shareApproved
+          ? 'Đã được duyệt — bấm để chọn màn hình'
+          : canShareDirectly
+            ? 'Trình Chiếu Màn Hình'
+            : 'Xin phép chia sẻ màn hình';
+
+  const shareBtnClass = isLocalSharing
+    ? 'sharing'
+    : isScreenSharing
+      ? 'disabled'
+      : shareApprovalPending
+        ? 'pending'
+        : shareApproved
+          ? 'approved'
+          : 'idle';
 
   // Find hand raise count
   const handRaiseCount = raiseHandQueue.length;
@@ -76,11 +109,12 @@ export const ControlBar: React.FC = () => {
         {/* Section 2: Shared features */}
         <div className="control-group">
           <button
-            onClick={toggleScreenShare}
-            className={`action-btn ${isScreenSharing ? 'sharing' : 'idle'}`}
-            title={isScreenSharing ? 'Dừng Trình Chiếu' : 'Trình Chiếu Màn Hình'}
+            onClick={requestScreenShare}
+            className={`action-btn ${shareBtnClass}`}
+            title={shareTitle}
+            disabled={shareApprovalPending || (isScreenSharing && !isLocalSharing)}
           >
-            <Monitor size={26} />
+            {shareApprovalPending ? <Loader2 size={26} className="spin" /> : <Monitor size={26} />}
           </button>
 
           <button

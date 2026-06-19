@@ -1,5 +1,33 @@
 // @ts-ignore
 import JitsiMeetJS from 'lib-jitsi-meet';
+import type { UserRole } from './roles';
+import { getDeviceInfo } from './deviceInfo';
+import type { DeviceInfo } from './deviceInfo';
+
+// Chỉ số telemetry đã chuẩn hoá từ stats của Jitsi (BRD 7.5)
+export interface LiveStats {
+  latency: number;      // ms (rtt)
+  packetLoss: number;   // %
+  jitter: number;       // ms (0 nếu trình duyệt không cấp)
+  bitrate: number;      // Kbps (down + up)
+  framerate: number;    // fps
+  networkType?: string; // từ transport (wifi/ethernet/cellular...) nếu có
+}
+
+// Chuẩn hoá object stats thô của lib-jitsi-meet về LiveStats
+function normalizeStats(stats: any): LiveStats {
+  const transport = Array.isArray(stats?.transport) ? stats.transport[0] : undefined;
+  const fpsObj = stats?.framerate || {};
+  const fpsValues = Object.values(fpsObj).flatMap((v: any) => (typeof v === 'object' ? Object.values(v) : [v])) as number[];
+  return {
+    latency: Math.round(transport?.rtt ?? stats?.jvbRTT ?? 0),
+    packetLoss: Number(stats?.packetLoss?.total ?? 0),
+    jitter: Math.round(transport?.jitter ?? 0),
+    bitrate: Math.round((stats?.bitrate?.download ?? 0) + (stats?.bitrate?.upload ?? 0)),
+    framerate: fpsValues.length ? Math.max(...fpsValues) : 0,
+    networkType: transport?.networkType,
+  };
+}
 
 export interface JitsiCallbacks {
   onLocalTracksReady: (tracks: any[]) => void;
@@ -10,16 +38,20 @@ export interface JitsiCallbacks {
   onChatMessageReceived: (senderId: string, senderName: string, text: string, timestamp: Date) => void;
   onDominantSpeakerChanged: (id: string) => void;
   onConnectionStatsReceived: (id: string, stats: any) => void;
+  onLocalStatsUpdated?: (stats: LiveStats) => void;
+  onParticipantDeviceInfo?: (id: string, info: DeviceInfo) => void;
   onHandRaiseChanged: (id: string, isHandRaised: boolean) => void;
   onConferenceJoined: () => void;
   onConnectionFailed: (error: string) => void;
   onConnectionDisconnected: () => void;
+  onLocalScreenShareStopped?: () => void;
 }
 
 class JitsiService {
   private connection: any = null;
   private conference: any = null;
   private localTracks: any[] = [];
+  private localDesktopTrack: any = null;
   private callbacks: JitsiCallbacks | null = null;
   private isInitialized = false;
 
@@ -38,7 +70,7 @@ class JitsiService {
     }
   }
 
-  public connect(roomName: string, userName: string, _role: 'teacher' | 'student', callbacks: JitsiCallbacks) {
+  public connect(roomName: string, userName: string, _role: UserRole, callbacks: JitsiCallbacks) {
     this.init();
     this.callbacks = callbacks;
 
@@ -57,7 +89,6 @@ class JitsiService {
     // Xác định schema và port suffix
     const isHttps = jitsiPort === '443' || jitsiPort === '8443';
     const wsScheme = isHttps ? 'wss' : 'ws';
-    const httpScheme = isHttps ? 'https' : 'http';
     const portSuffix = (isHttps && jitsiPort === '443') || (!isHttps && jitsiPort === '80')
       ? ''
       : `:${jitsiPort}`;
@@ -71,8 +102,9 @@ class JitsiService {
             muc: 'conference.meet.edumeet.local',
             focus: 'focus.meet.edumeet.local',
           },
-          bosh: `${httpScheme}://${jitsiHost}${portSuffix}/http-bind`,
-          websocket: `${wsScheme}://${jitsiHost}${portSuffix}/xmpp-websocket`,
+          // lib-jitsi-meet mới: dùng `serviceUrl` thay cho `bosh`.
+          // Ưu tiên WebSocket; fallback BOSH khi cần đổi `wsScheme`->`httpScheme` + `/http-bind`.
+          serviceUrl: `${wsScheme}://${jitsiHost}${portSuffix}/xmpp-websocket`,
           clientNode: 'http://jitsi.org/jitsimeet',
           // Bỏ qua lỗi certificate tự ký khi dùng IP
           disableThirdPartyRequests: true,
@@ -84,8 +116,8 @@ class JitsiService {
             muc: 'conference.meet.jit.si',
             focus: 'focus.meet.jit.si',
           },
-          bosh: `https://meet.jit.si/http-bind?room=${normalizedRoom}`,
-          websocket: `wss://meet.jit.si/xmpp-websocket?room=${normalizedRoom}`,
+          // lib-jitsi-meet mới: `serviceUrl` thay cho `bosh`
+          serviceUrl: `wss://meet.jit.si/xmpp-websocket?room=${normalizedRoom}`,
           clientNode: 'http://jitsi.org/jitsimeet',
         };
 
@@ -144,10 +176,23 @@ class JitsiService {
     this.conference.on(confEvents.CONFERENCE_JOINED, () => {
       console.log('Joined Jitsi Conference successfully!');
       this.callbacks?.onConferenceJoined();
-      
+
+      // Broadcast thông tin thiết bị/mạng cho người khác trong phòng (BRD 7.6)
+      try {
+        this.conference.setLocalParticipantProperty('deviceInfo', JSON.stringify(getDeviceInfo()));
+      } catch (e) {
+        console.warn('Không thể broadcast deviceInfo:', e);
+      }
+
       // Initialize local media tracks after joining
       this.createLocalMedia();
     });
+
+    // Telemetry chi tiết của chính mình (BRD 7.5)
+    this.conference.on(
+      JitsiMeetJS.events.connectionQuality.LOCAL_STATS_UPDATED,
+      (stats: any) => this.callbacks?.onLocalStatsUpdated?.(normalizeStats(stats))
+    );
 
     this.conference.on(confEvents.TRACK_ADDED, (track: any) => {
       if (track.isLocal()) {
@@ -188,10 +233,16 @@ class JitsiService {
     });
 
     this.conference.on(confEvents.PARTICIPANT_PROPERTY_CHANGED, (participant: any, property: string, _oldValue: any, newValue: any) => {
+      const id = participant.getId();
       if (property === 'raisedHand') {
-        const id = participant.getId();
         console.log(`Hand raise changed: ${id} -> ${newValue}`);
         this.callbacks?.onHandRaiseChanged(id, !!newValue);
+      } else if (property === 'deviceInfo' && newValue) {
+        try {
+          this.callbacks?.onParticipantDeviceInfo?.(id, JSON.parse(newValue) as DeviceInfo);
+        } catch (e) {
+          console.warn('deviceInfo không hợp lệ từ participant', id, e);
+        }
       }
     });
   }
@@ -277,6 +328,94 @@ class JitsiService {
     }
   }
 
+  public startScreenShare(): Promise<any> {
+    return new Promise((resolve, reject) => {
+      if (!this.conference) {
+        reject(new Error('Conference is not active'));
+        return;
+      }
+      if (this.localDesktopTrack) {
+        resolve(this.localDesktopTrack);
+        return;
+      }
+
+      console.log('[JitsiService] Creating local desktop track...');
+      JitsiMeetJS.createLocalTracks({
+        devices: ['desktop'],
+        desktopSharingFrameRate: {
+          min: 5,
+          max: 30
+        }
+      })
+      .then((tracks: any[]) => {
+        const desktopTrack = tracks.find(t => t.getType() === 'video');
+        if (!desktopTrack) {
+          throw new Error('No desktop video track created');
+        }
+        this.localDesktopTrack = desktopTrack;
+
+        // Lắng nghe sự kiện người dùng ngắt chia sẻ màn hình từ trình duyệt
+        desktopTrack.addEventListener(
+          JitsiMeetJS.events.track.LOCAL_TRACK_STOPPED,
+          () => {
+            console.log('[JitsiService] Local desktop track stopped by user/browser');
+            if (this.callbacks?.onLocalScreenShareStopped) {
+              this.callbacks.onLocalScreenShareStopped();
+            } else {
+              this.stopScreenShare().catch(err => console.error(err));
+            }
+          }
+        );
+
+        this.conference.addTrack(desktopTrack)
+          .then(() => {
+            console.log('[JitsiService] Desktop track added to conference successfully');
+            resolve(desktopTrack);
+          })
+          .catch((err: any) => {
+            console.error('Failed to add desktop track to conference:', err);
+            desktopTrack.dispose();
+            this.localDesktopTrack = null;
+            reject(err);
+          });
+      })
+      .catch((err: any) => {
+        console.error('Failed to create desktop track:', err);
+        reject(err);
+      });
+    });
+  }
+
+  public stopScreenShare(): Promise<void> {
+    return new Promise((resolve) => {
+      if (!this.localDesktopTrack) {
+        resolve();
+        return;
+      }
+
+      console.log('[JitsiService] Removing desktop track from conference...');
+      const track = this.localDesktopTrack;
+      this.localDesktopTrack = null;
+
+      if (this.conference) {
+        this.conference.removeTrack(track)
+          .then(() => {
+            console.log('[JitsiService] Desktop track removed from conference');
+            track.dispose();
+            resolve();
+          })
+          .catch((err: any) => {
+            console.error('Failed to remove desktop track from conference:', err);
+            track.dispose();
+            resolve(); // Vẫn resolve và hủy track để dọn dẹp tài nguyên
+          });
+      } else {
+        track.dispose();
+        resolve();
+      }
+    });
+  }
+
   public disconnect() {
     this.localTracks.forEach(track => {
       try {
@@ -286,6 +425,16 @@ class JitsiService {
       }
     });
     this.localTracks = [];
+
+    // Giải phóng track chia sẻ màn hình cục bộ nếu có
+    if (this.localDesktopTrack) {
+      try {
+        this.localDesktopTrack.dispose();
+      } catch (e) {
+        console.error('Error disposing desktop track:', e);
+      }
+      this.localDesktopTrack = null;
+    }
 
     if (this.conference) {
       this.conference.leave().then(() => {

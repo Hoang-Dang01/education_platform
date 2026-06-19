@@ -1,11 +1,30 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getMockParticipants, getInitialChatMessages } from '../lib/mockData';
 import { jitsiService } from '../lib/jitsiService';
+import type { UserRole } from '../lib/roles';
+import { roleFromJitsi, isInstructor } from '../lib/roles';
+import { getDeviceInfo } from '../lib/deviceInfo';
+import type { DeviceType, NetworkType } from '../lib/mockData';
+
+// Bật chế độ mock (không gọi Jitsi) khi URL có ?mock=true — phục vụ demo/kiểm thử
+const isMockMode = () =>
+  typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('mock') === 'true';
+
+// Quy đổi chỉ số mạng -> nhãn chất lượng (đồng bộ ngưỡng với onConnectionStatsReceived)
+const qualityFromMetrics = (rtt: number, loss: number, jitter: number): Participant['connectionQuality'] => {
+  if (loss > 5 || rtt > 300 || jitter > 50) return 'critical';
+  if (loss > 3 || rtt > 200 || jitter > 30) return 'poor';
+  if (loss > 1 || rtt > 100 || jitter > 20) return 'good';
+  return 'excellent';
+};
+
+const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+const drift = (range: number) => (Math.random() - 0.5) * 2 * range;
 
 export interface Participant {
   id: string;
   name: string;
-  role: 'teacher' | 'student';
+  role: UserRole;
   isLocal: boolean;
   isAudioMuted: boolean;
   isVideoMuted: boolean;
@@ -16,30 +35,45 @@ export interface Participant {
   activeTimeSeconds: number; // For attendance tracking
   videoTrack?: any; // HTML5 native stream track wrapper
   audioTrack?: any;
+  // Telemetry & thiết bị real-time (BRD 7.4 – 7.6)
+  latency?: number;
+  packetLoss?: number;
+  jitter?: number;
+  bitrate?: number;
+  framerate?: number;
+  device?: DeviceType;
+  network?: NetworkType;
+  networkLabel?: string;
 }
+
+// Các trang trong LMS shell — gồm cả trang quản trị (users) và giám sát (monitoring)
+export type LmsPage = 'dashboard' | 'courses' | 'reports' | 'lobby' | 'users' | 'monitoring';
 
 export interface ChatMessage {
   id: string;
   senderId: string;
   senderName: string;
-  senderRole: 'teacher' | 'student';
+  senderRole: UserRole;
   text: string;
   timestamp: Date;
 }
 
 interface ClassContextType {
   screen: 'lms' | 'classroom';
-  activePage: 'dashboard' | 'courses' | 'reports' | 'lobby';
-  setActivePage: (page: 'dashboard' | 'courses' | 'reports' | 'lobby') => void;
+  activePage: LmsPage;
+  setActivePage: (page: LmsPage) => void;
   isAuthenticated: boolean;
-  login: (name: string, userRole: 'teacher' | 'student') => void;
+  login: (name: string, userRole: UserRole) => void;
   logout: () => void;
   roomName: string;
   userName: string;
-  role: 'teacher' | 'student';
+  role: UserRole;
   isAudioMuted: boolean;
   isVideoMuted: boolean;
   isScreenSharing: boolean;
+  shareApprovalPending: boolean;
+  shareApproved: boolean;
+  screenStream: MediaStream | null;
   isHandRaised: boolean;
   chatOpen: boolean;
   panelOpen: boolean;
@@ -48,11 +82,12 @@ interface ClassContextType {
   chatMessages: ChatMessage[];
   raiseHandQueue: string[]; // List of participant IDs in order
   dominantSpeakerId: string;
-  joinRoom: (room: string, name: string, userRole: 'teacher' | 'student') => void;
+  joinRoom: (room: string, name: string, userRole: UserRole) => void;
   leaveRoom: () => void;
   toggleAudio: () => void;
   toggleVideo: () => void;
   toggleScreenShare: () => void;
+  requestScreenShare: () => void;
   toggleHandRaise: () => void;
   toggleChat: () => void;
   togglePanel: () => void;
@@ -62,13 +97,15 @@ interface ClassContextType {
   lowerParticipantHand: (id: string) => void;
   theme: 'light' | 'dark';
   toggleTheme: () => void;
+  screenTrack: any | null;
+  screenSharingUserId: string;
 }
 
 const ClassContext = createContext<ClassContextType | undefined>(undefined);
 
 export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [screen, setScreen] = useState<'lms' | 'classroom'>('lms');
-  const [activePage, setActivePage] = useState<'dashboard' | 'courses' | 'reports' | 'lobby'>('dashboard');
+  const [activePage, setActivePage] = useState<LmsPage>('dashboard');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     return (localStorage.getItem('theme') as 'light' | 'dark') || 'dark';
@@ -84,10 +121,15 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
   const [roomName, setRoomName] = useState('');
   const [userName, setUserName] = useState('');
-  const [role, setRole] = useState<'teacher' | 'student'>('student');
+  const [role, setRole] = useState<UserRole>('student');
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isVideoMuted, setIsVideoMuted] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [shareApprovalPending, setShareApprovalPending] = useState(false);
+  const [shareApproved, setShareApproved] = useState(false);
+  const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
+  const [screenTrack, setScreenTrack] = useState<any | null>(null);
+  const [screenSharingUserId, setScreenSharingUserId] = useState<string>('');
   const [isHandRaised, setIsHandRaised] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
@@ -95,6 +137,8 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [dominantSpeakerId, setDominantSpeakerId] = useState<string>('');
+  // Bật mô phỏng telemetry (chế độ mock / khi fallback) để các chỉ số "nhảy số" như thật
+  const [simulateTelemetry, setSimulateTelemetry] = useState(false);
 
   // Derived state for hand raise queue (FIFO)
   const raiseHandQueue = participants
@@ -118,14 +162,40 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return () => clearInterval(timer);
   }, [screen]);
 
+  // Mô phỏng telemetry biến động khi ở chế độ mock/fallback (BRD 7.5 — demo không cần Jitsi)
+  useEffect(() => {
+    if (!simulateTelemetry || screen !== 'classroom') return;
+    const id = setInterval(() => {
+      setParticipants(prev =>
+        prev.map(p => {
+          if (p.latency === undefined) return p;
+          const latency = clamp(p.latency + drift(15), 15, 400);
+          const packetLoss = clamp((p.packetLoss ?? 0) + drift(0.4), 0, 12);
+          const jitter = clamp((p.jitter ?? 0) + drift(3), 1, 60);
+          const framerate = clamp((p.framerate ?? 30) + drift(2), 12, 30);
+          return {
+            ...p,
+            latency: Math.round(latency),
+            packetLoss: Math.round(packetLoss * 10) / 10,
+            jitter: Math.round(jitter),
+            framerate: Math.round(framerate),
+            connectionQuality: qualityFromMetrics(latency, packetLoss, jitter),
+          };
+        })
+      );
+    }, 2500);
+    return () => clearInterval(id);
+  }, [simulateTelemetry, screen]);
+
   // Join Room connecting with Jitsi Meet
-  const joinRoom = (room: string, name: string, userRole: 'teacher' | 'student') => {
+  const joinRoom = (room: string, name: string, userRole: UserRole) => {
     setRoomName(room);
     setUserName(name);
     setRole(userRole);
     setScreen('classroom');
 
-    // Create local user participant immediately
+    // Create local user participant immediately (kèm thông tin thiết bị/mạng — không cần chờ Jitsi)
+    const localDevice = getDeviceInfo();
     const localUser: Participant = {
       id: 'local-user',
       name: name,
@@ -136,13 +206,25 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       isHandRaised: false,
       connectionQuality: 'excellent',
       joinedAt: new Date(),
-      activeTimeSeconds: 0
+      activeTimeSeconds: 0,
+      device: localDevice.deviceType,
+      network: localDevice.network,
+      networkLabel: localDevice.networkLabel
     };
+    // Chế độ mock (?mock=true): bỏ qua Jitsi, dựng lớp mô phỏng đầy đủ telemetry để demo/kiểm thử
+    if (isMockMode()) {
+      console.log('[MOCK MODE] Bỏ qua Jitsi, dùng dữ liệu mô phỏng + telemetry động.');
+      setParticipants(getMockParticipants(name, userRole));
+      setChatMessages(getInitialChatMessages());
+      setSimulateTelemetry(true);
+      return;
+    }
+
     setParticipants([localUser]);
     setChatMessages([]);
 
     console.log('ClassProvider joining Jitsi Room...');
-    
+
     // Connect to Jitsi Meet XMPP Server
     jitsiService.connect(room, name, userRole, {
       onLocalTracksReady: (tracks) => {
@@ -161,6 +243,16 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       onRemoteTrackAdded: (track) => {
         const pId = track.getParticipantId();
         const type = track.getType();
+
+        // Nhận diện remote screen share track
+        if (type === 'video' && track.getVideoType() === 'desktop') {
+          console.log(`[ClassContext] Remote screen share track added from participant: ${pId}`);
+          setScreenTrack(track);
+          setScreenSharingUserId(pId);
+          setIsScreenSharing(true);
+          return;
+        }
+
         console.log(`Remote track added (${type}) for participant: ${pId}`);
 
         setParticipants(prev => {
@@ -196,6 +288,15 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       onRemoteTrackRemoved: (track) => {
         const pId = track.getParticipantId();
         const type = track.getType();
+
+        if (type === 'video' && track.getVideoType() === 'desktop') {
+          console.log(`[ClassContext] Remote screen share track removed from participant: ${pId}`);
+          setScreenTrack(null);
+          setScreenSharingUserId('');
+          setIsScreenSharing(false);
+          return;
+        }
+
         console.log(`Remote track removed (${type}) for participant: ${pId}`);
         setParticipants(prev =>
           prev.map(p => {
@@ -207,6 +308,12 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           })
         );
       },
+      onLocalScreenShareStopped: () => {
+        console.log('[ClassContext] Local screen share stopped callback received');
+        setScreenTrack(null);
+        setScreenSharingUserId('');
+        setIsScreenSharing(false);
+      },
       onParticipantJoined: (id, displayName, pRole) => {
         setParticipants(prev => {
           const exists = prev.some(p => p.id === id);
@@ -216,7 +323,7 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 ? {
                     ...p,
                     name: displayName || 'Học sinh',
-                    role: pRole === 'moderator' ? 'teacher' : 'student'
+                    role: roleFromJitsi(pRole)
                   }
                 : p
             );
@@ -287,6 +394,32 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           )
         );
       },
+      onLocalStatsUpdated: (stats) => {
+        // Telemetry chi tiết của chính mình (BRD 7.5)
+        setParticipants(prev =>
+          prev.map(p =>
+            p.isLocal
+              ? {
+                  ...p,
+                  latency: stats.latency,
+                  packetLoss: stats.packetLoss,
+                  jitter: stats.jitter,
+                  bitrate: stats.bitrate,
+                  framerate: stats.framerate,
+                }
+              : p
+          )
+        );
+      },
+      onParticipantDeviceInfo: (id, info) => {
+        setParticipants(prev =>
+          prev.map(p =>
+            p.id === id
+              ? { ...p, device: info.deviceType, network: info.network, networkLabel: info.networkLabel }
+              : p
+          )
+        );
+      },
       onConferenceJoined: () => {
         console.log('Conference joined event callback received');
       },
@@ -296,6 +429,7 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const mockP = getMockParticipants(name, userRole);
         setParticipants(mockP);
         setChatMessages(getInitialChatMessages());
+        setSimulateTelemetry(true);
       },
       onConnectionDisconnected: () => {
         console.log('Jitsi connection disconnected callback received');
@@ -306,6 +440,14 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const leaveRoom = () => {
     console.log('Leaving Jitsi room...');
     jitsiService.disconnect();
+
+    // Dừng luồng chia sẻ màn hình nếu đang bật
+    screenStream?.getTracks().forEach(t => t.stop());
+    setScreenStream(null);
+    setScreenTrack(null);
+    setScreenSharingUserId('');
+    setShareApproved(false);
+    setShareApprovalPending(false);
 
     setScreen('lms');
     setActivePage('dashboard');
@@ -320,6 +462,7 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setChatOpen(false);
     setPanelOpen(false);
     setDominantSpeakerId('');
+    setSimulateTelemetry(false);
   };
 
   const toggleAudio = () => {
@@ -345,9 +488,87 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const toggleScreenSharing = () => {
-    // Screen sharing is mocked visually as slides inside the grid for now, 
+    // Screen sharing is mocked visually as slides inside the grid for now,
     // but in Jitsi Meet we trigger local flag toggle.
     setIsScreenSharing(prev => !prev);
+  };
+
+  // Bắt đầu chụp màn hình THẬT bằng Screen Capture API (cần là user-gesture)
+  const startScreenCapture = async () => {
+    if (isMockMode()) {
+      try {
+        const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+        // Người dùng bấm "Stop sharing" của trình duyệt -> dừng luôn trong app
+        stream.getVideoTracks()[0]?.addEventListener('ended', stopScreenShare);
+        setScreenStream(stream);
+        setIsScreenSharing(true);
+        setShareApproved(false);
+        setShareApprovalPending(false);
+      } catch (err) {
+        // Người dùng bấm Cancel ở hộp chọn màn hình
+        console.warn('Hủy/không thể chia sẻ màn hình:', err);
+      }
+    } else {
+      try {
+        const desktopTrack = await jitsiService.startScreenShare();
+        setScreenTrack(desktopTrack);
+        setScreenSharingUserId('local-user');
+        setIsScreenSharing(true);
+        setShareApproved(false);
+        setShareApprovalPending(false);
+      } catch (err) {
+        console.warn('Không thể chia sẻ màn hình WebRTC:', err);
+      }
+    }
+  };
+
+  const stopScreenShare = () => {
+    if (isMockMode()) {
+      setScreenStream(prev => {
+        prev?.getTracks().forEach(t => t.stop());
+        return null;
+      });
+      setIsScreenSharing(false);
+      setShareApproved(false);
+      setShareApprovalPending(false);
+    } else {
+      jitsiService.stopScreenShare()
+        .then(() => {
+          setScreenTrack(null);
+          setScreenSharingUserId('');
+          setIsScreenSharing(false);
+          setShareApproved(false);
+          setShareApprovalPending(false);
+        })
+        .catch(err => console.error('Lỗi khi dừng chia sẻ màn hình WebRTC:', err));
+    }
+  };
+
+  // Yêu cầu chia sẻ màn hình — GV/Quản lý/Admin share trực tiếp; Học viên phải được GV duyệt.
+  const requestScreenShare = () => {
+    const isLocalSharing = screenSharingUserId === 'local-user' || (isMockMode() && isScreenSharing && screenStream !== null);
+    if (isLocalSharing) {
+      stopScreenShare();
+      return;
+    }
+    // Nếu có người khác đang chia sẻ, không làm gì cả
+    if (isScreenSharing) {
+      return;
+    }
+    if (isInstructor(role) || shareApproved) {
+      startScreenCapture();              // host, hoặc học viên đã được duyệt -> chọn màn hình
+      return;
+    }
+    // Học viên: gửi yêu cầu, chờ giáo viên duyệt
+    setShareApprovalPending(true);
+    // TODO(backend): gửi yêu cầu qua Jitsi data-channel / BE để GV bấm duyệt.
+    // Ở chế độ mock, mô phỏng GV duyệt sau ~2s; sau đó học viên bấm lần nữa để chọn màn hình.
+    if (isMockMode()) {
+      setTimeout(() => {
+        setShareApprovalPending(false);
+        setShareApproved(true);
+      }, 2000);
+    }
   };
 
   const toggleHandRaise = () => {
@@ -415,7 +636,7 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     );
   };
 
-  const login = (name: string, userRole: 'teacher' | 'student') => {
+  const login = (name: string, userRole: UserRole) => {
     setUserName(name);
     setRole(userRole);
     setIsAuthenticated(true);
@@ -445,6 +666,9 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         isAudioMuted,
         isVideoMuted,
         isScreenSharing,
+        shareApprovalPending,
+        shareApproved,
+        screenStream,
         isHandRaised,
         chatOpen,
         panelOpen,
@@ -458,6 +682,7 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         toggleAudio,
         toggleVideo,
         toggleScreenShare: toggleScreenSharing,
+        requestScreenShare,
         toggleHandRaise,
         toggleChat,
         togglePanel,
@@ -467,6 +692,8 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         lowerParticipantHand,
         theme,
         toggleTheme,
+        screenTrack,
+        screenSharingUserId,
       }}
     >
       {children}

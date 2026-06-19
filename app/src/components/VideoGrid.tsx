@@ -1,17 +1,29 @@
 import React, { useEffect, useRef } from 'react';
 import { useClass } from '../context/ClassContext';
 import type { Participant } from '../context/ClassContext';
-import { Mic, MicOff, Hand, Sparkles, Wifi, ShieldAlert, VolumeX } from 'lucide-react';
+import { Mic, MicOff, Hand, Sparkles, Wifi, ShieldAlert, VolumeX, Monitor, Laptop, Tablet, Smartphone } from 'lucide-react';
+import { isInstructor, roleLabel, can } from '../lib/roles';
+import type { DeviceType } from '../lib/mockData';
 import './VideoGrid.css';
 
+const deviceIcon = (d?: DeviceType) => {
+  switch (d) {
+    case 'desktop': return <Monitor size={12} />;
+    case 'laptop': return <Laptop size={12} />;
+    case 'tablet': return <Tablet size={12} />;
+    case 'mobile': return <Smartphone size={12} />;
+    default: return null;
+  }
+};
+
 // Sub-component to safely handle HTML5 track attachments
-interface JitsiTrackProps {
+export interface JitsiTrackProps {
   track: any;
   className?: string;
   isMuted?: boolean;
 }
 
-const JitsiTrack: React.FC<JitsiTrackProps> = ({ track, className, isMuted = false }) => {
+export const JitsiTrack: React.FC<JitsiTrackProps> = ({ track, className, isMuted = false }) => {
   const elementRef = useRef<HTMLVideoElement | HTMLAudioElement>(null);
 
   useEffect(() => {
@@ -56,12 +68,17 @@ const JitsiTrack: React.FC<JitsiTrackProps> = ({ track, className, isMuted = fal
 export const VideoGrid: React.FC = () => {
   const { participants, role, muteParticipant, lowerParticipantHand, dominantSpeakerId } = useClass();
 
+  // Telemetry/thiết bị của NGƯỜI KHÁC chỉ host (GV) + Quản lý/Admin được xem (BRD 7).
+  // Học viên chỉ thấy số liệu trên thẻ của chính mình.
+  const canSeeAllTelemetry = isInstructor(role);
+
   // Determine grid template style depending on participant counts
   const getGridClass = (count: number) => {
     if (count === 1) return 'grid-cols-1';
     if (count === 2) return 'grid-cols-2';
     if (count <= 4) return 'grid-cols-2-rows-2';
     if (count <= 6) return 'grid-cols-3-rows-2';
+    if (count <= 8) return 'grid-cols-4-rows-2';
     return 'grid-cols-auto';
   };
 
@@ -105,7 +122,7 @@ export const VideoGrid: React.FC = () => {
               />
             ) : (
               <div className="card-avatar-wrapper">
-                <div className={`avatar-circle ${p.role === 'teacher' ? 'teacher-avatar' : ''}`}>
+                <div className={`avatar-circle ${isInstructor(p.role) ? 'teacher-avatar' : ''}`}>
                   <span>{p.name.split(' ').pop()?.charAt(0)}</span>
                 </div>
                 <div className="avatar-ambient-glow"></div>
@@ -120,10 +137,10 @@ export const VideoGrid: React.FC = () => {
                   <span>Giơ tay</span>
                 </div>
               )}
-              {p.role === 'teacher' && (
+              {isInstructor(p.role) && (
                 <div className="teacher-badge">
                   <Sparkles size={12} />
-                  <span>Giáo viên</span>
+                  <span>{roleLabel(p.role)}</span>
                 </div>
               )}
             </div>
@@ -141,8 +158,8 @@ export const VideoGrid: React.FC = () => {
               )}
             </div>
 
-            {/* Teacher administrative overlays */}
-            {role === 'teacher' && !p.isLocal && (
+            {/* Administrative overlays — chỉ vai trò điều hành lớp (BRD: Quản lý quyền phát biểu) */}
+            {can(role, 'host_session') && !p.isLocal && (
               <div className="teacher-action-overlay">
                 {!p.isAudioMuted && (
                   <button
@@ -172,8 +189,26 @@ export const VideoGrid: React.FC = () => {
               <span className="participant-name">
                 {p.name} {p.isLocal && '(Bạn)'}
               </span>
-              <div className="quality-badge">{getQualityIcon(p.connectionQuality)}</div>
+              <div className="card-meta">
+                {p.device && (canSeeAllTelemetry || p.isLocal) && (
+                  <span className="device-tag" title={p.networkLabel || p.network}>
+                    {deviceIcon(p.device)}
+                    {p.network && <Wifi size={12} />}
+                  </span>
+                )}
+                <div className="quality-badge">{getQualityIcon(p.connectionQuality)}</div>
+              </div>
             </div>
+
+            {/* Telemetry real-time (BRD 7.5) — host/QL thấy mọi người, học viên chỉ thấy của mình */}
+            {p.latency !== undefined && (canSeeAllTelemetry || p.isLocal) && (
+              <div className="card-telemetry">
+                <span title="Độ trễ">{p.latency}ms</span>
+                <span title="Mất gói">{p.packetLoss ?? 0}%</span>
+                {p.jitter !== undefined && <span title="Jitter">{p.jitter}ms</span>}
+                {p.framerate ? <span title="FPS">{p.framerate}fps</span> : null}
+              </div>
+            )}
           </div>
         );
       })}
