@@ -303,7 +303,7 @@ services:
       # UDP port for WebRTC media — PHẢI mở firewall cho port này!
       - "${JVB_PORT:-10000}:${JVB_PORT:-10000}/udp"
       # TCP fallback
-      - "4443:4443"
+      - "${JVB_TCP_PORT:-4443}:4443"
     volumes:
       - ${CONFIG:-./config}/jvb:/config:Z
     environment:
@@ -335,6 +335,24 @@ services:
       - XMPP_PORT
     depends_on:
       - prosody
+    networks:
+      meet.jitsi:
+
+  # ----------------------------------------------------------
+  # 5. Frontend UI — EduMeet React App (Vite)
+  # ----------------------------------------------------------
+  frontend:
+    build:
+      context: ../../app
+      dockerfile: Dockerfile
+      args:
+        - VITE_JITSI_HOST=${DOCKER_HOST_ADDRESS}
+        - VITE_JITSI_PORT=${HTTPS_PORT:-8443}
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-8082}:80"
+    depends_on:
+      - web
     networks:
       meet.jitsi:
 
