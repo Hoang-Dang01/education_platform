@@ -15,7 +15,7 @@ sudo ufw allow 5001/tcp   # HTTP (redirect sang HTTPS)
 sudo ufw allow 8070/tcp   # HTTPS — Web UI EduMeet
 sudo ufw allow 9621/udp   # JVB Media — QUAN TRỌNG nhất cho WebRTC
 sudo ufw allow 5678/tcp   # JVB TCP fallback
-sudo ufw allow 8082/tcp   # Frontend Web App UI
+sudo ufw allow 15672/tcp   # Frontend Web App UI
 sudo ufw reload
 ```
 
@@ -88,7 +88,7 @@ docker-jitsi-web-1      running   0.0.0.0:5001->80/tcp, 0.0.0.0:8070->443/tcp
 docker-jitsi-prosody-1  running
 docker-jitsi-jicofo-1   running
 docker-jitsi-jvb-1      running   0.0.0.0:9621->9621/udp
-docker-jitsi-frontend-1 running   0.0.0.0:8082->80/tcp
+docker-jitsi-frontend-1 running   0.0.0.0:15672->80/tcp
 ```
 
 ---
