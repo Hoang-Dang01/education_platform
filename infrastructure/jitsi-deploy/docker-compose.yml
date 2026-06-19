@@ -16,7 +16,7 @@ services:
   # 1. Web UI + Nginx Reverse Proxy (TLS termination)
   # ----------------------------------------------------------
   web:
-    image: jitsi/web:stable-9457
+    image: jitsi/web:stable-9457-1
     restart: unless-stopped
     ports:
       - "${HTTP_PORT:-8080}:80"
@@ -149,7 +149,7 @@ services:
   # 2. Prosody — XMPP Signaling Server
   # ----------------------------------------------------------
   prosody:
-    image: jitsi/prosody:stable-9457
+    image: jitsi/prosody:stable-9457-1
     restart: unless-stopped
     expose:
       - "${XMPP_PORT:-5222}"
@@ -240,7 +240,7 @@ services:
   # 3. Jicofo — Conference Focus Component
   # ----------------------------------------------------------
   jicofo:
-    image: jitsi/jicofo:stable-9457
+    image: jitsi/jicofo:stable-9457-1
     restart: unless-stopped
     volumes:
       - ${CONFIG:-./config}/jicofo:/config:Z
@@ -297,7 +297,7 @@ services:
   # 4. JVB — Jitsi Videobridge (Media Routing)
   # ----------------------------------------------------------
   jvb:
-    image: jitsi/jvb:stable-9457
+    image: jitsi/jvb:stable-9457-1
     restart: unless-stopped
     ports:
       # UDP port for WebRTC media — PHẢI mở firewall cho port này!
