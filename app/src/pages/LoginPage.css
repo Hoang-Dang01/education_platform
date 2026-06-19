@@ -204,3 +204,23 @@
   border-color: var(--color-cyan-light);
   box-shadow: 0 0 15px var(--color-cyan-glow);
 }
+
+.quick-btn.admin-btn {
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.quick-btn.admin-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.6);
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.25);
+}
+
+.quick-btn.manager-btn {
+  border-color: rgba(245, 158, 11, 0.2);
+}
+
+.quick-btn.manager-btn:hover {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.6);
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.25);
+}

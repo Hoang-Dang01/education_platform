@@ -1,13 +1,24 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useClass } from '../context/ClassContext';
-import { Video, VideoOff, Mic, MicOff, BookOpen, User, Sparkles, LogIn } from 'lucide-react';
+import { Video, VideoOff, Mic, MicOff, BookOpen, User, Sparkles, LogIn, Shield, Briefcase } from 'lucide-react';
+import type { UserRole } from '../lib/roles';
+import { ROLE_META } from '../lib/roles';
 import './WelcomeScreen.css';
 
+// Icon đại diện cho từng vai trò trong bộ chọn
+const ROLE_ICONS: Record<UserRole, React.ReactNode> = {
+  admin: <Shield size={16} />,
+  manager: <Briefcase size={16} />,
+  teacher: <Sparkles size={16} />,
+  student: <User size={16} />,
+};
+
 export const WelcomeScreen: React.FC = () => {
-  const { joinRoom } = useClass();
+  const { joinRoom, role: authRole } = useClass();
   const [name, setName] = useState('');
   const [room, setRoom] = useState('');
-  const [role, setRole] = useState<'teacher' | 'student'>('student');
+  // Mặc định theo vai trò đã đăng nhập, nhưng vẫn cho phép đổi trước khi vào lớp
+  const [role, setRole] = useState<UserRole>(authRole);
   
   const [localMuteAudio, setLocalMuteAudio] = useState(false);
   const [localMuteVideo, setLocalMuteVideo] = useState(false);
@@ -165,22 +176,18 @@ export const WelcomeScreen: React.FC = () => {
             <div className="input-group">
               <label>Vai Trò Trong Lớp Học</label>
               <div className="role-selector">
-                <button
-                  type="button"
-                  onClick={() => setRole('student')}
-                  className={`role-btn ${role === 'student' ? 'active' : ''}`}
-                >
-                  <User size={16} />
-                  <span>Học Viên</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRole('teacher')}
-                  className={`role-btn ${role === 'teacher' ? 'active' : ''}`}
-                >
-                  <Sparkles size={16} />
-                  <span>Giáo Viên</span>
-                </button>
+                {(['student', 'teacher', 'manager', 'admin'] as UserRole[]).map(r => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setRole(r)}
+                    className={`role-btn ${role === r ? 'active' : ''}`}
+                    title={ROLE_META[r].description}
+                  >
+                    {ROLE_ICONS[r]}
+                    <span>{ROLE_META[r].label}</span>
+                  </button>
+                ))}
               </div>
             </div>
 

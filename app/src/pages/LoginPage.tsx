@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useClass } from '../context/ClassContext';
 import { BookOpen, Sparkles, User, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import type { UserRole } from '../lib/roles';
+import { roleLabel } from '../lib/roles';
 import './LoginPage.css';
 
 export const LoginPage: React.FC = () => {
@@ -9,25 +11,36 @@ export const LoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
+  // Nhận diện vai trò từ tên tài khoản (tạm thời — sẽ thay bằng API xác thực thật)
+  const detectRole = (input: string): UserRole => {
+    const u = input.toLowerCase();
+    if (u.includes('admin') || u.includes('quantri')) return 'admin';
+    if (u.includes('manager') || u.includes('quanly')) return 'manager';
+    if (u.includes('teacher') || u.includes('nam') || u.includes('giaovien')) return 'teacher';
+    return 'student';
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!username.trim()) return;
 
-    // Detect role based on username or default to student
-    const isTeacher = username.toLowerCase().includes('teacher') || username.toLowerCase().includes('nam') || username.toLowerCase().includes('giaovien');
-    const dispName = isTeacher ? 'Thầy Nguyễn Hải Nam' : username;
-    const finalRole = isTeacher ? 'teacher' : 'student';
+    const finalRole = detectRole(username);
+    const dispName = finalRole === 'teacher' ? 'Thầy Nguyễn Hải Nam' : username;
 
     login(dispName, finalRole);
   };
 
+  // Tên hiển thị mẫu cho từng vai trò khi đăng nhập nhanh (thử nghiệm)
+  const QUICK_LOGIN_NAMES: Record<UserRole, string> = {
+    admin: 'Quản trị viên Hệ thống',
+    manager: 'Cô Trần Điều Phối',
+    teacher: 'Thầy Nguyễn Hải Nam',
+    student: 'Nguyễn Đăng',
+  };
+
   // Quick testing logs autofill & submit
-  const handleQuickLogin = (roleType: 'teacher' | 'student') => {
-    if (roleType === 'teacher') {
-      login('Thầy Nguyễn Hải Nam', 'teacher');
-    } else {
-      login('Nguyễn Đăng', 'student');
-    }
+  const handleQuickLogin = (roleType: UserRole) => {
+    login(QUICK_LOGIN_NAMES[roleType], roleType);
   };
 
   return (
@@ -112,12 +125,15 @@ export const LoginPage: React.FC = () => {
               <span>Hoặc thử nghiệm nhanh</span>
             </div>
             <div className="quick-buttons">
-              <button onClick={() => handleQuickLogin('teacher')} className="quick-btn teacher-btn">
-                <span>Vào với vai trò Giáo viên</span>
-              </button>
-              <button onClick={() => handleQuickLogin('student')} className="quick-btn student-btn">
-                <span>Vào với vai trò Học viên</span>
-              </button>
+              {(['admin', 'manager', 'teacher', 'student'] as UserRole[]).map(r => (
+                <button
+                  key={r}
+                  onClick={() => handleQuickLogin(r)}
+                  className={`quick-btn ${r}-btn`}
+                >
+                  <span>Vào với vai trò {roleLabel(r)}</span>
+                </button>
+              ))}
             </div>
           </div>
         </main>

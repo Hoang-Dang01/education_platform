@@ -4,11 +4,25 @@ import { WelcomeScreen } from './WelcomeScreen';
 import { DashboardPage } from '../pages/DashboardPage';
 import { CoursesPage } from '../pages/CoursesPage';
 import { ReportsPage } from '../pages/ReportsPage';
-import { LayoutDashboard, BookOpen, BarChart3, Video, User, Bell, Shield, LogOut, Sun, Moon } from 'lucide-react';
+import { UserManagementPage } from '../pages/UserManagementPage';
+import { MonitoringPage } from '../pages/MonitoringPage';
+import { LayoutDashboard, BookOpen, BarChart3, Video, User, Bell, Shield, LogOut, Sun, Moon, Users, MonitorPlay } from 'lucide-react';
+import { can, roleLabel } from '../lib/roles';
 import './LmsShell.css';
 
 export const LmsShell: React.FC = () => {
   const { activePage, setActivePage, userName, role, logout, theme, toggleTheme } = useClass();
+
+  // Quyền hiển thị các mục điều hướng theo BRD 2.5
+  const canViewReports = can(role, 'view_reports');
+  const canManageUsers = can(role, 'manage_users');
+  const canMonitor = can(role, 'monitor_classes');
+
+  // Nhãn mục "khóa học" thay đổi theo vai trò
+  const coursesLabel =
+    role === 'student' ? 'Khóa học của tôi'
+    : role === 'teacher' ? 'Lớp phụ trách'
+    : 'Quản lý khóa học';
 
   const renderContent = () => {
     switch (activePage) {
@@ -18,6 +32,10 @@ export const LmsShell: React.FC = () => {
         return <CoursesPage />;
       case 'reports':
         return <ReportsPage />;
+      case 'users':
+        return <UserManagementPage />;
+      case 'monitoring':
+        return <MonitoringPage />;
       case 'lobby':
         return <WelcomeScreen />;
       default:
@@ -52,16 +70,38 @@ export const LmsShell: React.FC = () => {
             className={`nav-item ${activePage === 'courses' ? 'active' : ''}`}
           >
             <BookOpen size={18} />
-            <span>Khóa học của tôi</span>
+            <span>{coursesLabel}</span>
           </button>
 
-          <button
-            onClick={() => setActivePage('reports')}
-            className={`nav-item ${activePage === 'reports' ? 'active' : ''}`}
-          >
-            <BarChart3 size={18} />
-            <span>Báo cáo chuyên cần</span>
-          </button>
+          {canViewReports && (
+            <button
+              onClick={() => setActivePage('reports')}
+              className={`nav-item ${activePage === 'reports' ? 'active' : ''}`}
+            >
+              <BarChart3 size={18} />
+              <span>Báo cáo chuyên cần</span>
+            </button>
+          )}
+
+          {canMonitor && (
+            <button
+              onClick={() => setActivePage('monitoring')}
+              className={`nav-item ${activePage === 'monitoring' ? 'active' : ''}`}
+            >
+              <MonitorPlay size={18} />
+              <span>Giám sát lớp học</span>
+            </button>
+          )}
+
+          {canManageUsers && (
+            <button
+              onClick={() => setActivePage('users')}
+              className={`nav-item ${activePage === 'users' ? 'active' : ''}`}
+            >
+              <Users size={18} />
+              <span>Quản lý người dùng</span>
+            </button>
+          )}
 
           <button
             onClick={() => setActivePage('lobby')}
@@ -81,14 +121,8 @@ export const LmsShell: React.FC = () => {
             <div className="user-info">
               <h4>{userName || 'Khách'}</h4>
               <span className="user-role-tag">
-                {role === 'teacher' ? (
-                  <>
-                    <Shield size={10} />
-                    <span>Giáo viên</span>
-                  </>
-                ) : (
-                  <span>Học sinh</span>
-                )}
+                {can(role, 'host_session') && <Shield size={10} />}
+                <span>{roleLabel(role)}</span>
               </span>
             </div>
           </div>
@@ -106,8 +140,10 @@ export const LmsShell: React.FC = () => {
             <span className="separator">/</span>
             <span className="active-breadcrumb">
               {activePage === 'dashboard' && 'Bảng điều khiển'}
-              {activePage === 'courses' && 'Khóa học của tôi'}
+              {activePage === 'courses' && coursesLabel}
               {activePage === 'reports' && 'Báo cáo chuyên cần'}
+              {activePage === 'monitoring' && 'Giám sát lớp học'}
+              {activePage === 'users' && 'Quản lý người dùng'}
               {activePage === 'lobby' && 'Phòng học trực tuyến'}
             </span>
           </div>
