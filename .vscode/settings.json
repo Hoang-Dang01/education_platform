@@ -1,0 +1,11 @@
+{
+  "java.project.sourcePaths": [],
+  "java.import.exclusions": [
+    "**/jitsi-meet/**",
+    "**/node_modules/**",
+    "**/android/**"
+  ],
+  "files.exclude": {
+    "jitsi-meet": false
+  }
+}

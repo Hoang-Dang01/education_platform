@@ -73,23 +73,23 @@ Hệ thống thu thập dữ liệu liên tục trong suốt thời gian diễn 
 * Các thông số này có thể được cấu hình theo quy mô triển khai.
 
 ## 8.5. Phân tích chất lượng kết nối
-Dựa trên các chỉ số thu thập được, hệ thống tự động đánh giá chất lượng kết nối của từng người tham gia theo các trạng thái: `Excellent`, `Good`, `Fair`, `Poor`, `Critical`.
+Dựa trên các chỉ số thu thập được, hệ thống tự động đánh giá chất lượng kết nối của từng người tham gia theo các trạng thái: `Excellent`, `Good`, `Poor`, `Critical`.
 
 *Ví dụ ma trận đánh giá chất lượng:*
 
 | Latency | Packet Loss | Jitter | Đánh giá |
 | :---: | :---: | :---: | :---: |
-| 50 ms | 0.5% | 10 ms | Excellent |
-| 120 ms | 1.0% | 20 ms | Good |
-| 250 ms | 4.0% | 35 ms | Fair |
-| 350 ms | 7.0% | 60 ms | Poor |
+| 80 ms | 0.5% | 8 ms | Excellent |
+| 140 ms | 1.5% | 12 ms | Good |
+| 220 ms | 3.5% | 25 ms | Poor |
+| 350 ms | 6.0% | 40 ms | Critical |
 
 ## 8.6. Cảnh báo thời gian thực
 Hệ thống tự động sinh cảnh báo khi các chỉ số vượt ngưỡng cho phép.
-* *Ví dụ các cảnh báo:*
+* *Ví dụ các cảnh báo (mức Critical):*
   * **Latency cao:** Latency > 300 ms
   * **Packet Loss cao:** Packet Loss > 5%
-  * **Jitter cao:** Jitter > 50 ms
+  * **Jitter cao:** Jitter > 30 ms
   * **Video chất lượng thấp:** FPS < 10
   * **Mất kết nối liên tục:** Nhiều lần Disconnect trong khoảng thời gian ngắn.
 

@@ -24,7 +24,7 @@ Hệ thống ghi nhận môi trường và thông số kết nối mạng:
 ## 9.5. Chất lượng kết nối
 Đối với từng người tham gia, hệ thống hiển thị các chỉ số chất lượng kết nối được thu thập từ WebRTC Statistics API.
 * **Chỉ số hiển thị:** Latency, Packet Loss, Jitter, RTT, Bitrate, FPS.
-* **Trạng thái chất lượng:** Hệ thống tự động phân loại thành các mức `Excellent`, `Good`, `Fair`, `Poor`, `Critical`.
+* **Trạng thái chất lượng:** Hệ thống tự động phân loại thành các mức `Excellent`, `Good`, `Poor`, `Critical`.
 
 ## 9.6. Trạng thái tham gia học tập
 Cho phép theo dõi tình trạng tham gia của người dùng trong buổi học:
