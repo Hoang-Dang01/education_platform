@@ -25,3 +25,28 @@ Các tài liệu của dự án được tổ chức và quản lý độc lập
 
 ---
 Chi tiết cấu trúc cây thư mục của toàn bộ dự án có thể tham khảo tại file [Cau_Truc_Thu_Muc.md](Cau_Truc_Thu_Muc.md).
+
+## Triển khai bằng Docker (Docker Deployment)
+
+Để xây dựng và chạy thử nghiệm container frontend dưới máy local hoặc deploy lên môi trường staging:
+
+1. **Xây dựng Docker image (Build Image)**:
+   Chạy lệnh sau từ thư mục gốc của dự án:
+   ```bash
+   docker build -t education-platform-frontend -f app/Dockerfile ./app
+   ```
+
+2. **Chạy Container (Run Container)**:
+   Chạy lệnh sau để khởi chạy ứng dụng trên cổng `8080`:
+   ```bash
+   docker run -d -p 8080:80 --name edu-frontend education-platform-frontend
+   ```
+
+3. **Kiểm tra (Verify)**:
+   Truy cập [http://localhost:8080](http://localhost:8080) bằng trình duyệt để kiểm tra hoạt động.
+
+4. **Dừng và xóa container (Clean up)**:
+   ```bash
+   docker rm -f edu-frontend
+   ```
+
