@@ -43,20 +43,54 @@ class JitsiService {
     this.callbacks = callbacks;
 
     const normalizedRoom = roomName.toLowerCase().replace(/[^a-z0-9_-]/g, '');
-    
-    // Standard Jitsi configuration targeting meet.jit.si public server
-    const connectionConfig = {
-      hosts: {
-        domain: 'meet.jit.si',
-        muc: 'conference.meet.jit.si',
-        focus: 'focus.meet.jit.si',
-      },
-      bosh: `https://meet.jit.si/http-bind?room=${normalizedRoom}`,
-      websocket: `wss://meet.jit.si/xmpp-websocket?room=${normalizedRoom}`,
-      clientNode: 'http://jitsi.org/jitsimeet',
-    };
 
-    console.log(`Connecting to room: ${normalizedRoom} as ${userName}`);
+    // -------------------------------------------------------
+    // Đọc cấu hình server từ biến môi trường Vite
+    // Dev local:  VITE_JITSI_HOST=localhost, VITE_JITSI_PORT=8443
+    // Production: VITE_JITSI_HOST=YOUR_SERVER_IP, VITE_JITSI_PORT=8443
+    // Fallback:   meet.jit.si (public server — chỉ dùng khi không có config)
+    // -------------------------------------------------------
+    const jitsiHost = import.meta.env.VITE_JITSI_HOST || 'meet.jit.si';
+    const jitsiPort = import.meta.env.VITE_JITSI_PORT || '443';
+    const isSelfHosted = jitsiHost !== 'meet.jit.si';
+
+    // Xác định schema và port suffix
+    const isHttps = jitsiPort === '443' || jitsiPort === '8443';
+    const wsScheme = isHttps ? 'wss' : 'ws';
+    const httpScheme = isHttps ? 'https' : 'http';
+    const portSuffix = (isHttps && jitsiPort === '443') || (!isHttps && jitsiPort === '80')
+      ? ''
+      : `:${jitsiPort}`;
+
+    // Cấu hình kết nối XMPP
+    const connectionConfig = isSelfHosted
+      ? {
+          // Self-hosted server (IP hoặc domain tự quản lý)
+          hosts: {
+            domain: 'meet.edumeet.local',
+            muc: 'conference.meet.edumeet.local',
+            focus: 'focus.meet.edumeet.local',
+          },
+          bosh: `${httpScheme}://${jitsiHost}${portSuffix}/http-bind`,
+          websocket: `${wsScheme}://${jitsiHost}${portSuffix}/xmpp-websocket`,
+          clientNode: 'http://jitsi.org/jitsimeet',
+          // Bỏ qua lỗi certificate tự ký khi dùng IP
+          disableThirdPartyRequests: true,
+        }
+      : {
+          // Fallback: meet.jit.si public server
+          hosts: {
+            domain: 'meet.jit.si',
+            muc: 'conference.meet.jit.si',
+            focus: 'focus.meet.jit.si',
+          },
+          bosh: `https://meet.jit.si/http-bind?room=${normalizedRoom}`,
+          websocket: `wss://meet.jit.si/xmpp-websocket?room=${normalizedRoom}`,
+          clientNode: 'http://jitsi.org/jitsimeet',
+        };
+
+    console.log(`[JitsiService] Connecting to: ${jitsiHost}${portSuffix}`);
+    console.log(`[JitsiService] Room: ${normalizedRoom} | User: ${userName}`);
     this.connection = new JitsiMeetJS.JitsiConnection(null, null, connectionConfig);
 
     this.connection.addEventListener(
