@@ -11,14 +11,15 @@
 
 ```bash
 # Lệnh mở port trên UFW (Ubuntu)
-sudo ufw allow 8080/tcp   # HTTP (redirect sang HTTPS)
-sudo ufw allow 8443/tcp   # HTTPS — Web UI EduMeet
-sudo ufw allow 10000/udp  # JVB Media — QUAN TRỌNG nhất cho WebRTC
-sudo ufw allow 4443/tcp   # JVB TCP fallback
+sudo ufw allow 5001/tcp   # HTTP (redirect sang HTTPS)
+sudo ufw allow 8070/tcp   # HTTPS — Web UI EduMeet
+sudo ufw allow 9621/udp   # JVB Media — QUAN TRỌNG nhất cho WebRTC
+sudo ufw allow 5678/tcp   # JVB TCP fallback
+sudo ufw allow 15672/tcp   # Frontend Web App UI
 sudo ufw reload
 ```
 
-> ⚠️ **Nếu không mở port 10000/UDP, video/audio sẽ không hoạt động dù kết nối XMPP thành công.**
+> ⚠️ **Nếu không mở port 9621/UDP, video/audio sẽ không hoạt động dù kết nối XMPP thành công.**
 
 ---
 
@@ -53,7 +54,7 @@ nano .env
 # Tìm 3 dòng sau và thay IP:
 #   DOCKER_HOST_ADDRESS=YOUR_SERVER_IP
 #   JVB_ADVERTISE_IPS=YOUR_SERVER_IP
-#   PUBLIC_URL=https://YOUR_SERVER_IP:8443
+#   PUBLIC_URL=https://YOUR_SERVER_IP:8070
 ```
 
 ---
@@ -83,10 +84,11 @@ docker compose ps
 **Kết quả mong đợi:**
 ```
 NAME            STATUS          PORTS
-docker-jitsi-web-1      running   0.0.0.0:8080->80/tcp, 0.0.0.0:8443->443/tcp
+docker-jitsi-web-1      running   0.0.0.0:5001->80/tcp, 0.0.0.0:8070->443/tcp
 docker-jitsi-prosody-1  running
 docker-jitsi-jicofo-1   running
-docker-jitsi-jvb-1      running   0.0.0.0:10000->10000/udp
+docker-jitsi-jvb-1      running   0.0.0.0:9621->9621/udp
+docker-jitsi-frontend-1 running   0.0.0.0:15672->80/tcp
 ```
 
 ---
@@ -95,17 +97,17 @@ docker-jitsi-jvb-1      running   0.0.0.0:10000->10000/udp
 
 ```bash
 # Kiểm tra web UI phản hồi (bỏ qua cảnh báo SSL self-signed)
-curl -k https://localhost:8443
+curl -k https://localhost:8070
 
 # Kiểm tra JVB health
-curl http://localhost:8080/about/health
+curl http://localhost:5001/about/health
 ```
 
 ---
 
 ## Bước 6 — Truy cập từ trình duyệt
 
-1. Mở `https://YOUR_SERVER_IP:8443`
+1. Mở `https://YOUR_SERVER_IP:8070`
 2. Trình duyệt sẽ cảnh báo **"Kết nối không bảo mật"** — đây là bình thường với self-signed cert
 3. Click **"Advanced"** → **"Proceed to YOUR_SERVER_IP (unsafe)"**
 4. Tạo phòng thử nghiệm, join 2 tab → xác nhận video/audio hoạt động
@@ -118,7 +120,7 @@ Sau khi server đã chạy, cập nhật file `app/.env.production`:
 
 ```env
 VITE_JITSI_HOST=YOUR_SERVER_IP
-VITE_JITSI_PORT=8443
+VITE_JITSI_PORT=8070
 VITE_FORCE_MOCK=false
 ```
 
