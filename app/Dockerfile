@@ -3,6 +3,13 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Add build arguments for Vite configuration (để docker-compose truyền IP/port khi build)
+ARG VITE_JITSI_HOST
+ARG VITE_JITSI_PORT
+ENV VITE_JITSI_HOST=$VITE_JITSI_HOST
+ENV VITE_JITSI_PORT=$VITE_JITSI_PORT
+
+
 # Copy dependency definitions
 COPY package.json package-lock.json ./
 
