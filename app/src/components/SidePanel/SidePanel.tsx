@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useClass } from '../context/ClassContext';
+import { useClass } from '../../context/ClassContext';
 import { MessageSquare, Users, Send, Download, X, CheckCircle, Clock } from 'lucide-react';
 import './SidePanel.css';
 

@@ -135,3 +135,299 @@ html, body, #root {
   top: 40%;
   left: 60%;
 }
+
+/* ==========================================================================
+   SHARED PAGE STYLES
+   ========================================================================== */
+
+/* Global Page Layout Container & Transitions */
+.page-container {
+  width: 100%;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding-bottom: 2rem;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out forwards;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Common Helper & Utility Classes */
+.font-bold {
+  font-weight: 600;
+}
+
+.text-success { color: var(--color-success-light); }
+.text-warning { color: var(--color-warning-light); }
+.text-danger { color: var(--color-danger-light); }
+.text-primary { color: var(--color-primary-light); }
+.text-muted { color: var(--text-muted); }
+
+/* Common UI Elements: Badges, Pills & Tables */
+.banner-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  color: var(--color-success-light);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.banner-badge.live {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: var(--color-danger-light);
+}
+
+.status-pill {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+}
+
+.status-pill.active {
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--color-success-light);
+}
+
+.status-pill.suspended {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--color-danger-light);
+}
+
+.status-pill.status-in_progress {
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--color-success-light);
+}
+
+.status-pill.status-interrupted {
+  background: rgba(245, 158, 11, 0.14);
+  color: var(--color-warning-light);
+}
+
+.status-pill.status-scheduled {
+  background: rgba(99, 102, 241, 0.12);
+  color: var(--color-primary-light);
+}
+
+.status-pill.status-completed {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
+}
+
+.status-pill.status-cancelled {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--color-danger-light);
+}
+
+.role-cell {
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+.role-cell.teacher {
+  background: rgba(99, 102, 241, 0.15);
+  color: var(--color-primary-light);
+}
+
+.role-cell.student {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.reports-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+}
+
+.reports-table th, 
+.reports-table td {
+  padding: 1rem 1.25rem;
+}
+
+.reports-table th {
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-secondary);
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.reports-table td {
+  color: var(--text-primary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.reports-table tr:hover td {
+  background: rgba(255, 255, 255, 0.01);
+}
+
+.back-btn {
+  width: fit-content;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--glass-border);
+  transition: all var(--transition-fast);
+}
+
+.back-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.reports-section {
+  padding: 1.5rem;
+}
+
+.reports-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.reports-section-header h3 {
+  font-family: var(--font-title);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* Common KPI Card Structures (used by Dashboard and Admin pages) */
+.welcome-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2rem;
+  background: linear-gradient(135deg, rgba(30, 41, 71, 0.45) 0%, rgba(15, 23, 42, 0.45) 100%);
+  border-left: 4px solid var(--color-primary-light);
+}
+
+.welcome-banner h2 {
+  font-family: var(--font-title);
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.welcome-banner p {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.kpi-card {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.kpi-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.kpi-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.kpi-icon-wrapper {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* KPI accents based on colors */
+.kpi-card.accent-green .kpi-icon-wrapper {
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--color-success-light);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.kpi-card.accent-indigo .kpi-icon-wrapper {
+  background: rgba(99, 102, 241, 0.12);
+  color: var(--color-primary-light);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+}
+
+.kpi-card.accent-cyan .kpi-icon-wrapper {
+  background: rgba(6, 182, 212, 0.12);
+  color: var(--color-cyan-light);
+  border: 1px solid rgba(6, 182, 212, 0.25);
+}
+
+.kpi-card.accent-amber .kpi-icon-wrapper {
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--color-warning-light);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.kpi-card.accent-red .kpi-icon-wrapper {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--color-danger-light);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.kpi-body h3 {
+  font-family: var(--font-title);
+  font-size: 2.25rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 0.35rem;
+}
+
+.kpi-body p {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+

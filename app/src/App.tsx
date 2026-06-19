@@ -1,8 +1,8 @@
 import React from 'react';
 import { ClassProvider, useClass } from './context/ClassContext';
-import { LmsShell } from './components/LmsShell';
-import { ClassroomScreen } from './components/ClassroomScreen';
-import { LoginPage } from './pages/LoginPage';
+import { LmsShell } from './components/LmsShell/LmsShell';
+import { ClassroomScreen } from './components/ClassroomScreen/ClassroomScreen';
+import { LoginPage } from './pages/LoginPage/LoginPage';
 import './styles/global.css';
 
 const AppContent: React.FC = () => {

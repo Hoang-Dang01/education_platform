@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
-import { useClass } from '../context/ClassContext';
+import { useClass } from '../../context/ClassContext';
 import {
   Radio, Users, Wifi, ShieldAlert, Eye, ArrowLeft, AlertTriangle, CheckCircle2,
   Monitor, Laptop, Tablet, Smartphone, Cable, Signal, ShieldCheck, Mic, MicOff, Video, VideoOff,
   Presentation, GraduationCap, Activity,
 } from 'lucide-react';
-import { mockLiveClasses } from '../lib/mockData';
-import type { MockLiveClass, LiveParticipant, ClassStatus, DeviceType, NetworkType } from '../lib/mockData';
-import { metricLevel, hasIssue, diagnoseClass, diagnoseInfra } from '../lib/diagnostics';
-import type { MetricKey, DiagnosisType } from '../lib/diagnostics';
-import { roleLabel } from '../lib/roles';
-import './Pages.css';
+import { mockLiveClasses } from '../../lib/mockData';
+import type { MockLiveClass, LiveParticipant, ClassStatus, DeviceType, NetworkType } from '../../lib/mockData';
+import { metricLevel, hasIssue, diagnoseClass, diagnoseInfra } from '../../lib/diagnostics';
+import type { MetricKey, DiagnosisType } from '../../lib/diagnostics';
+import { roleLabel } from '../../lib/roles';
+import './MonitoringPage.css';
 
 const STATUS_LABEL: Record<ClassStatus, string> = {
   scheduled: 'Đã lên lịch', in_progress: 'Đang diễn ra', completed: 'Đã kết thúc',

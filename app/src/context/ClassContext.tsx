@@ -107,11 +107,45 @@ const ClassContext = createContext<ClassContextType | undefined>(undefined);
 
 export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [screen, setScreen] = useState<'lms' | 'classroom'>('lms');
-  const [activePage, setActivePage] = useState<LmsPage>('dashboard');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [activePage, setActivePageState] = useState<LmsPage>(() => {
+    const hash = window.location.hash.replace('#', '') as LmsPage;
+    const validPages: LmsPage[] = ['dashboard', 'courses', 'reports', 'lobby', 'users', 'monitoring'];
+    return validPages.includes(hash) ? hash : 'dashboard';
+  });
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return sessionStorage.getItem('isAuthenticated') === 'true';
+  });
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     return (localStorage.getItem('theme') as 'light' | 'dark') || 'dark';
   });
+
+  const setActivePage = (page: LmsPage) => {
+    setActivePageState(page);
+    window.location.hash = page;
+  };
+
+  // Đồng bộ hóa activePage khi URL hash thay đổi (Back/Forward hoặc người dùng gõ URL)
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '') as LmsPage;
+      const validPages: LmsPage[] = ['dashboard', 'courses', 'reports', 'lobby', 'users', 'monitoring'];
+      if (validPages.includes(hash)) {
+        setActivePageState(hash);
+      }
+    };
+
+    // Đặt hash ban đầu nếu chưa có hash hợp lệ trên URL
+    const currentHash = window.location.hash.replace('#', '') as LmsPage;
+    const validPages: LmsPage[] = ['dashboard', 'courses', 'reports', 'lobby', 'users', 'monitoring'];
+    if (!validPages.includes(currentHash)) {
+      window.location.hash = activePage;
+    }
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [isAuthenticated, activePage]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -122,9 +156,13 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
   };
   const [roomName, setRoomName] = useState('');
-  const [userName, setUserName] = useState('');
+  const [userName, setUserName] = useState(() => {
+    return sessionStorage.getItem('userName') || '';
+  });
   const [sessionStartTime, setSessionStartTime] = useState<number>(0);
-  const [role, setRole] = useState<UserRole>('student');
+  const [role, setRole] = useState<UserRole>(() => {
+    return (sessionStorage.getItem('role') as UserRole) || 'student';
+  });
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isVideoMuted, setIsVideoMuted] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
@@ -697,15 +735,32 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setUserName(name);
     setRole(userRole);
     setIsAuthenticated(true);
+    sessionStorage.setItem('isAuthenticated', 'true');
+    sessionStorage.setItem('userName', name);
+    sessionStorage.setItem('role', userRole);
     setScreen('lms');
-    setActivePage('dashboard');
+    
+    // Đọc hash nếu có sẵn từ trước, nếu không thì mặc định là dashboard
+    const hash = window.location.hash.replace('#', '') as LmsPage;
+    const validPages: LmsPage[] = ['dashboard', 'courses', 'reports', 'lobby', 'users', 'monitoring'];
+    if (validPages.includes(hash)) {
+      setActivePageState(hash);
+    } else {
+      setActivePageState('dashboard');
+      window.location.hash = 'dashboard';
+    }
   };
 
   const logout = () => {
     setIsAuthenticated(false);
     setUserName('');
+    setRole('student');
+    sessionStorage.removeItem('isAuthenticated');
+    sessionStorage.removeItem('userName');
+    sessionStorage.removeItem('role');
     setScreen('lms');
-    setActivePage('dashboard');
+    setActivePageState('dashboard');
+    window.location.hash = '';
   };
 
   return (

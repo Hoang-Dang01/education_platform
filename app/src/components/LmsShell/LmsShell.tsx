@@ -1,13 +1,13 @@
 import React from 'react';
-import { useClass } from '../context/ClassContext';
-import { WelcomeScreen } from './WelcomeScreen';
-import { DashboardPage } from '../pages/DashboardPage';
-import { CoursesPage } from '../pages/CoursesPage';
-import { ReportsPage } from '../pages/ReportsPage';
-import { UserManagementPage } from '../pages/UserManagementPage';
-import { MonitoringPage } from '../pages/MonitoringPage';
+import { useClass } from '../../context/ClassContext';
+import { WelcomeScreen } from '../WelcomeScreen/WelcomeScreen';
+import { DashboardPage } from '../../pages/DashboardPage/DashboardPage';
+import { CoursesPage } from '../../pages/CoursesPage/CoursesPage';
+import { ReportsPage } from '../../pages/ReportsPage/ReportsPage';
+import { UserManagementPage } from '../../pages/UserManagementPage/UserManagementPage';
+import { MonitoringPage } from '../../pages/MonitoringPage/MonitoringPage';
 import { LayoutDashboard, BookOpen, BarChart3, Video, User, Bell, Shield, LogOut, Sun, Moon, Users, MonitorPlay } from 'lucide-react';
-import { can, roleLabel } from '../lib/roles';
+import { can, roleLabel } from '../../lib/roles';
 import './LmsShell.css';
 
 export const LmsShell: React.FC = () => {

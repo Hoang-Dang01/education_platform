@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { useClass } from '../context/ClassContext';
+import { useClass } from '../../context/ClassContext';
 import { BookOpen, Sparkles, User, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react';
-import type { UserRole } from '../lib/roles';
-import { roleLabel } from '../lib/roles';
+import type { UserRole } from '../../lib/roles';
+import { roleLabel } from '../../lib/roles';
 import './LoginPage.css';
 
 export const LoginPage: React.FC = () => {

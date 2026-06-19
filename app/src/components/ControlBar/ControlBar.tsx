@@ -1,5 +1,5 @@
 import React from 'react';
-import { useClass } from '../context/ClassContext';
+import { useClass } from '../../context/ClassContext';
 import {
   Mic,
   MicOff,
@@ -12,7 +12,7 @@ import {
   PhoneOff,
   Loader2,
 } from 'lucide-react';
-import { isInstructor } from '../lib/roles';
+import { isInstructor } from '../../lib/roles';
 import './ControlBar.css';
 
 export const ControlBar: React.FC = () => {

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useClass } from '../context/ClassContext';
+import { useClass } from '../../context/ClassContext';
 import { Video, VideoOff, Mic, MicOff, BookOpen, User, Sparkles, LogIn, Shield, Briefcase } from 'lucide-react';
-import type { UserRole } from '../lib/roles';
-import { ROLE_META } from '../lib/roles';
+import type { UserRole } from '../../lib/roles';
+import { ROLE_META } from '../../lib/roles';
 import './WelcomeScreen.css';
 
 // Icon đại diện cho từng vai trò trong bộ chọn

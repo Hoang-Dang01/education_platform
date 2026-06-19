@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useClass } from '../context/ClassContext';
+import { useClass } from '../../context/ClassContext';
 import { BookOpen, FileText, Video, Download, Upload, Search, ArrowLeft, Plus, Users, UserCheck, Trash2, X, FileImage } from 'lucide-react';
-import { mockCourses } from '../lib/mockData';
-import type { MockCourse } from '../lib/mockData';
-import { can } from '../lib/roles';
-import { getMaterials, saveMaterial, deleteMaterial } from '../lib/localDb';
-import type { LocalMaterial } from '../lib/localDb';
-import './Pages.css';
+import { mockCourses } from '../../lib/mockData';
+import type { MockCourse } from '../../lib/mockData';
+import { can } from '../../lib/roles';
+import { getMaterials, saveMaterial, deleteMaterial } from '../../lib/localDb';
+import type { LocalMaterial } from '../../lib/localDb';
+import './CoursesPage.css';
 
 // Tiêu đề khu vực khóa học theo vai trò
 const COURSE_HEADINGS: Record<string, { title: string; subtitle: string }> = {

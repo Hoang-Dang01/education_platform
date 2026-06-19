@@ -1,9 +1,9 @@
 import React, { useEffect, useRef } from 'react';
-import { useClass } from '../context/ClassContext';
-import type { Participant } from '../context/ClassContext';
+import { useClass } from '../../context/ClassContext';
+import type { Participant } from '../../context/ClassContext';
 import { Mic, MicOff, Hand, Sparkles, Wifi, ShieldAlert, VolumeX, Monitor, Laptop, Tablet, Smartphone } from 'lucide-react';
-import { isInstructor, roleLabel, can } from '../lib/roles';
-import type { DeviceType } from '../lib/mockData';
+import { isInstructor, roleLabel, can } from '../../lib/roles';
+import type { DeviceType } from '../../lib/mockData';
 import './VideoGrid.css';
 
 const deviceIcon = (d?: DeviceType) => {

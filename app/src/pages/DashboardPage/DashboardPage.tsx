@@ -1,12 +1,12 @@
 import React from 'react';
-import { useClass } from '../context/ClassContext';
+import { useClass } from '../../context/ClassContext';
 import {
   Calendar, Clock, ArrowRight, TrendingUp, UserCheck, Activity,
   Users, Radio, Wifi, Lock, BookOpen, GraduationCap, Presentation, Eye,
 } from 'lucide-react';
-import { dashboardByRole, mockUpcomingClasses, mockLiveClasses } from '../lib/mockData';
-import type { KpiIconName } from '../lib/mockData';
-import './Pages.css';
+import { dashboardByRole, mockUpcomingClasses, mockLiveClasses } from '../../lib/mockData';
+import type { KpiIconName } from '../../lib/mockData';
+import './DashboardPage.css';
 
 // Ánh xạ tên icon (trong mock data) sang component icon
 const KPI_ICONS: Record<KpiIconName, React.ReactNode> = {

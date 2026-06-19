@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useClass } from '../context/ClassContext';
-import { VideoGrid, JitsiTrack } from './VideoGrid';
-import { ControlBar } from './ControlBar';
-import { SidePanel } from './SidePanel';
+import { useClass } from '../../context/ClassContext';
+import { VideoGrid, JitsiTrack } from '../VideoGrid/VideoGrid';
+import { ControlBar } from '../ControlBar/ControlBar';
+import { SidePanel } from '../SidePanel/SidePanel';
 import { Clock, BookOpen, Presentation, MonitorUp } from 'lucide-react';
 import './ClassroomScreen.css';
 

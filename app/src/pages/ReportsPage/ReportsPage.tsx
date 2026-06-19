@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Download, CheckCircle2, Clock, ArrowLeft } from 'lucide-react';
-import { mockReportSessions } from '../lib/mockData';
-import { getSessionReports } from '../lib/localDb';
-import type { SessionReport } from '../lib/localDb';
-import './Pages.css';
+import { mockReportSessions } from '../../lib/mockData';
+import { getSessionReports } from '../../lib/localDb';
+import type { SessionReport } from '../../lib/localDb';
+import './ReportsPage.css';
 
 export const ReportsPage: React.FC = () => {
   const [selectedSession, setSelectedSession] = useState<SessionReport | null>(null);

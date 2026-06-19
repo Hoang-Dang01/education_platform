@@ -1,10 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { Users, ShieldCheck, UserCog, Ban, CheckCircle2, Search } from 'lucide-react';
-import { mockUsers } from '../lib/mockData';
-import type { MockUser } from '../lib/mockData';
-import type { UserRole } from '../lib/roles';
-import { ROLE_META, roleLabel } from '../lib/roles';
-import './Pages.css';
+import { mockUsers } from '../../lib/mockData';
+import type { MockUser } from '../../lib/mockData';
+import type { UserRole } from '../../lib/roles';
+import { ROLE_META, roleLabel } from '../../lib/roles';
+import './UserManagementPage.css';
 
 const ALL_ROLES: UserRole[] = ['admin', 'manager', 'teacher', 'student'];
 
