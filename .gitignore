@@ -1,0 +1,22 @@
+# ============================================================
+#  education-platform — Root .gitignore
+# ============================================================
+
+# Nested git repos (không track bằng outer repo)
+# infrastructure/jitsi-src là source code Jitsi Meet để tham khảo
+infrastructure/jitsi-src/
+jitsi-meet/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/settings.json
+.idea/
+*.suo
+*.user
+
+# Logs
+*.log

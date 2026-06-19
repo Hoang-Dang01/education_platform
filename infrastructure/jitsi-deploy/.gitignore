@@ -1,0 +1,5 @@
+# Bảo vệ file .env chứa passwords thật — KHÔNG commit lên git
+.env
+
+# Thư mục config được tạo bởi Jitsi containers
+jitsi-config/
