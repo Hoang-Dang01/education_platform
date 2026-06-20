@@ -163,6 +163,7 @@ export interface MockMaterial {
   type: 'pdf' | 'slide' | 'video';
   size?: string;
   url: string;
+  uploadedBy?: string;
 }
 
 export interface MockCourse {
@@ -191,10 +192,10 @@ export const mockCourses: MockCourse[] = [
     progress: 80,
     desc: 'Khóa học cung cấp kiến thức nền tảng và nâng cao về Đạo hàm, Tích phân và Ứng dụng trong các bài toán hình học giải tích.',
     materials: [
-      { id: 'm1', title: 'Bài giảng Đạo hàm & Khảo sát hàm số', type: 'slide', size: '4.2 MB', url: '#' },
-      { id: 'm2', title: 'Tài liệu ôn tập Nguyên hàm - Tích phân', type: 'pdf', size: '1.8 MB', url: '#' },
-      { id: 'm3', title: 'Bài tập trắc nghiệm chương 2 giải tích', type: 'pdf', size: '850 KB', url: '#' },
-      { id: 'm4', title: 'Video ghi lại buổi học Giải tích ngày 15/06', type: 'video', url: '#' },
+      { id: 'm1', title: 'Bài giảng Đạo hàm & Khảo sát hàm số', type: 'slide', size: '4.2 MB', url: '#', uploadedBy: 'Hệ thống' },
+      { id: 'm2', title: 'Tài liệu ôn tập Nguyên hàm - Tích phân', type: 'pdf', size: '1.8 MB', url: '#', uploadedBy: 'Thầy Nguyễn Hải Nam' },
+      { id: 'm3', title: 'Bài tập trắc nghiệm chương 2 giải tích', type: 'pdf', size: '850 KB', url: '#', uploadedBy: 'Thầy Nguyễn Hải Nam' },
+      { id: 'm4', title: 'Video ghi lại buổi học Giải tích ngày 15/06', type: 'video', url: '#', uploadedBy: 'Thầy Nguyễn Hải Nam' },
     ],
     studentCount: 6,
     attendanceRate: 95.8,
@@ -210,9 +211,9 @@ export const mockCourses: MockCourse[] = [
     progress: 65,
     desc: 'Tìm hiểu về các định luật Vật Lý cơ bản: Dao động cơ học, Sóng cơ và Sóng âm, Dòng điện xoay chiều.',
     materials: [
-      { id: 'm5', title: 'Đề cương ôn tập học kỳ Dao động cơ', type: 'pdf', size: '2.1 MB', url: '#' },
-      { id: 'm6', title: 'Slide bài giảng Sóng âm & Đặc tính vật lý', type: 'slide', size: '3.6 MB', url: '#' },
-      { id: 'm7', title: 'Video thực hành Đo bước sóng ánh sáng', type: 'video', url: '#' },
+      { id: 'm5', title: 'Đề cương ôn tập học kỳ Dao động cơ', type: 'pdf', size: '2.1 MB', url: '#', uploadedBy: 'Hệ thống' },
+      { id: 'm6', title: 'Slide bài giảng Sóng âm & Đặc tính vật lý', type: 'slide', size: '3.6 MB', url: '#', uploadedBy: 'Cô Lê Thu Thảo' },
+      { id: 'm7', title: 'Video thực hành Đo bước sóng ánh sáng', type: 'video', url: '#', uploadedBy: 'Cô Lê Thu Thảo' },
     ],
     studentCount: 18,
     attendanceRate: 91.2,
@@ -228,8 +229,8 @@ export const mockCourses: MockCourse[] = [
     progress: 45,
     desc: 'Giới thiệu về thế giới hóa học hữu cơ: Este, Lipit, Cacbohidrat và các phản ứng hữu cơ quan trọng.',
     materials: [
-      { id: 'm8', title: 'Tóm tắt lý thuyết phản ứng xà phòng hóa', type: 'pdf', size: '1.1 MB', url: '#' },
-      { id: 'm9', title: 'Bài tập peptit và chuỗi phản ứng Amin', type: 'pdf', size: '940 KB', url: '#' },
+      { id: 'm8', title: 'Tóm tắt lý thuyết phản ứng xà phòng hóa', type: 'pdf', size: '1.1 MB', url: '#', uploadedBy: 'Hệ thống' },
+      { id: 'm9', title: 'Bài tập peptit và chuỗi phản ứng Amin', type: 'pdf', size: '940 KB', url: '#', uploadedBy: 'Thầy Phạm Quốc Bảo' },
     ],
     studentCount: 22,
     attendanceRate: 84.4,

@@ -11,6 +11,8 @@ export interface LocalMaterial {
   fileSize: string;
   fileBlob: Blob;
   uploadedAt: string; // ISO date string
+  uploadedBy: string; // Name of uploader
+  isPrivate?: boolean; // True if it's personal document
 }
 
 export interface SessionReportDetail {
@@ -97,6 +99,23 @@ export async function deleteMaterial(id: string): Promise<void> {
     const request = store.delete(id);
 
     request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}
+
+// Lấy tất cả tài liệu cá nhân của một người dùng
+export async function getPersonalMaterials(userName: string): Promise<LocalMaterial[]> {
+  const db = await initDb();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(STORE_NAME, 'readonly');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.getAll();
+
+    request.onsuccess = () => {
+      const all = request.result as LocalMaterial[];
+      const filtered = all.filter(m => m.isPrivate === true && m.uploadedBy === userName);
+      resolve(filtered);
+    };
     request.onerror = () => reject(request.error);
   });
 }

@@ -648,3 +648,65 @@
   border: 1px dashed var(--glass-border);
   border-radius: 8px;
 }
+
+/* Tab switcher styles */
+.courses-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  padding: 0.35rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  width: fit-content;
+}
+
+.courses-tabs .tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.25rem;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.courses-tabs .tab-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.courses-tabs .tab-btn.active {
+  background: linear-gradient(135deg, var(--color-purple) 0%, var(--color-purple-light) 100%);
+  color: white;
+  box-shadow: 0 4px 12px var(--color-purple-glow);
+}
+
+/* Material uploader info style */
+.material-uploader {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+}
+
+.personal-materials-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.personal-materials-header h3 {
+  font-family: var(--font-title);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+

@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useClass } from '../../context/ClassContext';
-import { BookOpen, FileText, Video, Download, Upload, Search, ArrowLeft, Plus, Users, UserCheck, Trash2, X, FileImage } from 'lucide-react';
+import { BookOpen, FileText, Video, Download, Upload, Search, ArrowLeft, Plus, Users, UserCheck, Trash2, X, FileImage, Folder } from 'lucide-react';
 import { mockCourses } from '../../lib/mockData';
 import type { MockCourse } from '../../lib/mockData';
 import { can } from '../../lib/roles';
-import { getMaterials, saveMaterial, deleteMaterial } from '../../lib/localDb';
+import { getMaterials, saveMaterial, deleteMaterial, getPersonalMaterials } from '../../lib/localDb';
 import type { LocalMaterial } from '../../lib/localDb';
 import './CoursesPage.css';
 
@@ -20,9 +20,11 @@ export const CoursesPage: React.FC = () => {
   const { role, userName } = useClass();
   const [selectedCourse, setSelectedCourse] = useState<MockCourse | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'courses' | 'personal'>('courses');
 
   // Các state để lưu tài liệu từ IndexedDB và kiểm soát upload modal
   const [localMaterials, setLocalMaterials] = useState<LocalMaterial[]>([]);
+  const [personalMaterials, setPersonalMaterials] = useState<LocalMaterial[]>([]);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadTitle, setUploadTitle] = useState('');
   const [uploadType, setUploadType] = useState<'pdf' | 'slide' | 'video' | 'image'>('pdf');
@@ -45,6 +47,16 @@ export const CoursesPage: React.FC = () => {
     }
   };
 
+  // Tải danh sách tài liệu cá nhân
+  const loadPersonalMaterials = async () => {
+    try {
+      const list = await getPersonalMaterials(userName);
+      setPersonalMaterials(list);
+    } catch (err) {
+      console.error('Failed to load personal materials:', err);
+    }
+  };
+
   useEffect(() => {
     if (selectedCourse) {
       loadLocalMaterials(selectedCourse.id);
@@ -53,6 +65,12 @@ export const CoursesPage: React.FC = () => {
     }
   }, [selectedCourse]);
 
+  useEffect(() => {
+    if (activeTab === 'personal') {
+      loadPersonalMaterials();
+    }
+  }, [activeTab, userName]);
+
   // Giáo viên chỉ thấy lớp mình phụ trách; nếu không khớp tên thì hiển thị tất cả (fallback)
   const taught = mockCourses.filter(c => c.teacher === userName);
   const scopedCourses = role === 'teacher' && taught.length > 0 ? taught : mockCourses;
@@ -60,6 +78,11 @@ export const CoursesPage: React.FC = () => {
   const filteredCourses = scopedCourses.filter(c =>
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     c.code.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredPersonalMaterials = personalMaterials.filter(m =>
+    m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    m.fileName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const getMaterialIcon = (type: string) => {
@@ -169,22 +192,29 @@ export const CoursesPage: React.FC = () => {
 
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedFile || !selectedCourse || !uploadTitle.trim()) return;
+    if (!selectedFile || !uploadTitle.trim()) return;
+    if (activeTab === 'courses' && !selectedCourse) return;
 
     try {
       const newMaterial: LocalMaterial = {
         id: 'local-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
-        courseId: selectedCourse.id,
+        courseId: activeTab === 'courses' ? selectedCourse!.id : 'private',
         title: uploadTitle.trim(),
         fileName: selectedFile.name,
         fileType: uploadType,
         fileSize: formatFileSize(selectedFile.size),
         fileBlob: selectedFile,
         uploadedAt: new Date().toISOString(),
+        uploadedBy: userName || 'Hệ thống',
+        isPrivate: activeTab === 'personal'
       };
 
       await saveMaterial(newMaterial);
-      await loadLocalMaterials(selectedCourse.id);
+      if (activeTab === 'courses' && selectedCourse) {
+        await loadLocalMaterials(selectedCourse.id);
+      } else {
+        await loadPersonalMaterials();
+      }
       closeModal();
     } catch (err) {
       console.error('Failed to save material:', err);
@@ -192,12 +222,15 @@ export const CoursesPage: React.FC = () => {
     }
   };
 
-  const handleDeleteLocalMaterial = async (id: string) => {
-    if (!selectedCourse) return;
+  const handleDeleteLocalMaterial = async (id: string, isPrivateMat?: boolean) => {
     if (confirm('Bạn có chắc chắn muốn xóa tài liệu này?')) {
       try {
         await deleteMaterial(id);
-        await loadLocalMaterials(selectedCourse.id);
+        if (isPrivateMat) {
+          await loadPersonalMaterials();
+        } else if (selectedCourse) {
+          await loadLocalMaterials(selectedCourse.id);
+        }
       } catch (err) {
         console.error('Failed to delete material:', err);
       }
@@ -257,7 +290,10 @@ export const CoursesPage: React.FC = () => {
               <div key={m.id} className="material-item-row glass-panel">
                 <div className="material-info">
                   {getMaterialIcon(m.type)}
-                  <span className="material-title">{m.title}</span>
+                  <div className="material-title-group">
+                    <span className="material-title">{m.title}</span>
+                    <span className="material-uploader">Người tải lên: {m.uploadedBy || 'Hệ thống'}</span>
+                  </div>
                   {m.size && <span className="material-size">{m.size}</span>}
                 </div>
                 <div className="material-actions">
@@ -273,36 +309,40 @@ export const CoursesPage: React.FC = () => {
             ))}
 
             {/* Danh sách tài liệu tự tải lên (IndexedDB) */}
-            {localMaterials.map(m => (
-              <div key={m.id} className="material-item-row glass-panel local-material">
-                <div className="material-info">
-                  {getMaterialIcon(m.fileType)}
-                  <div className="material-title-group">
-                    <span className="material-title">{m.title}</span>
-                    <span className="material-filename">{m.fileName}</span>
+            {localMaterials.map(m => {
+              const canDelete = role === 'admin' || role === 'manager' || (canShareMaterials && m.uploadedBy === userName);
+              return (
+                <div key={m.id} className="material-item-row glass-panel local-material">
+                  <div className="material-info">
+                    {getMaterialIcon(m.fileType)}
+                    <div className="material-title-group">
+                      <span className="material-title">{m.title}</span>
+                      <span className="material-filename">{m.fileName}</span>
+                      <span className="material-uploader">Người tải lên: {m.uploadedBy || 'Chưa rõ'}</span>
+                    </div>
+                    <span className="material-size">{m.fileSize}</span>
                   </div>
-                  <span className="material-size">{m.fileSize}</span>
-                </div>
-                <div className="material-actions">
-                  <button 
-                    className="download-btn-icon" 
-                    title="Tải xuống"
-                    onClick={() => handleDownloadLocal(m)}
-                  >
-                    <Download size={14} />
-                  </button>
-                  {canShareMaterials && (
+                  <div className="material-actions">
                     <button 
-                      className="delete-btn-icon text-danger" 
-                      title="Xóa tài liệu"
-                      onClick={() => handleDeleteLocalMaterial(m.id)}
+                      className="download-btn-icon" 
+                      title="Tải xuống"
+                      onClick={() => handleDownloadLocal(m)}
                     >
-                      <Trash2 size={14} />
+                      <Download size={14} />
                     </button>
-                  )}
+                    {canDelete && (
+                      <button 
+                        className="delete-btn-icon text-danger" 
+                        title="Xóa tài liệu"
+                        onClick={() => handleDeleteLocalMaterial(m.id)}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             {selectedCourse.materials.length === 0 && localMaterials.length === 0 && (
               <div className="no-materials">Chưa có tài liệu nào trong khóa học này.</div>
@@ -418,7 +458,7 @@ export const CoursesPage: React.FC = () => {
           <h2 className="courses-page-title">{heading.title}</h2>
           <p className="courses-page-subtitle">{heading.subtitle}</p>
         </div>
-        {canManageCourses && (
+        {canManageCourses && activeTab === 'courses' && (
           <button className="upload-btn">
             <Plus size={16} />
             <span>Thêm khóa học</span>
@@ -426,61 +466,233 @@ export const CoursesPage: React.FC = () => {
         )}
       </div>
 
+      <div className="courses-tabs">
+        <button 
+          className={`tab-btn ${activeTab === 'courses' ? 'active' : ''}`}
+          onClick={() => {
+            setActiveTab('courses');
+            setSearchQuery('');
+          }}
+        >
+          <BookOpen size={16} />
+          <span>Khóa học</span>
+        </button>
+        <button 
+          className={`tab-btn ${activeTab === 'personal' ? 'active' : ''}`}
+          onClick={() => {
+            setActiveTab('personal');
+            setSearchQuery('');
+          }}
+        >
+          <Folder size={16} />
+          <span>Tài liệu cá nhân</span>
+        </button>
+      </div>
+
       <div className="courses-header-actions">
         <div className="search-bar-wrapper">
           <Search size={16} className="search-icon" />
           <input
             type="text"
-            placeholder="Tìm kiếm môn học..."
+            placeholder={activeTab === 'courses' ? 'Tìm kiếm môn học...' : 'Tìm tài liệu cá nhân...'}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
           />
         </div>
       </div>
 
-      <div className="courses-grid">
-        {filteredCourses.map(c => (
-          <div key={c.id} className="course-card glass-panel" onClick={() => setSelectedCourse(c)}>
-            <div className="course-card-head">
-              <span className="course-card-code">{c.code}</span>
-              <h3>{c.name}</h3>
-              <p>{c.teacher}</p>
-            </div>
+      {activeTab === 'courses' ? (
+        <div className="courses-grid">
+          {filteredCourses.map(c => (
+            <div key={c.id} className="course-card glass-panel" onClick={() => setSelectedCourse(c)}>
+              <div className="course-card-head">
+                <span className="course-card-code">{c.code}</span>
+                <h3>{c.name}</h3>
+                <p>{c.teacher}</p>
+              </div>
 
-            <div className="course-card-footer">
-              {isStudent ? (
-                <>
-                  <div className="progress-container">
-                    <div className="progress-bar-track">
-                      <div className="progress-bar-fill" style={{ width: `${c.progress}%` }}></div>
+              <div className="course-card-footer">
+                {isStudent ? (
+                  <>
+                    <div className="progress-container">
+                      <div className="progress-bar-track">
+                        <div className="progress-bar-fill" style={{ width: `${c.progress}%` }}></div>
+                      </div>
+                      <span className="progress-text">{c.progress}% bài học</span>
                     </div>
-                    <span className="progress-text">{c.progress}% bài học</span>
+                    <span className="materials-badge">{c.materialsCount} tài liệu</span>
+                  </>
+                ) : (
+                  <div className="course-mgmt-stats">
+                    <div className="mgmt-stat">
+                      <Users size={13} />
+                      <span>{c.studentCount}</span>
+                      <small>học viên</small>
+                    </div>
+                    <div className="mgmt-stat">
+                      <UserCheck size={13} />
+                      <span>{c.attendanceRate}%</span>
+                      <small>chuyên cần</small>
+                    </div>
+                    <div className="mgmt-stat">
+                      <BookOpen size={13} />
+                      <span>{c.sessionsDone}/{c.sessionsTotal}</span>
+                      <small>buổi</small>
+                    </div>
                   </div>
-                  <span className="materials-badge">{c.materialsCount} tài liệu</span>
-                </>
-              ) : (
-                <div className="course-mgmt-stats">
-                  <div className="mgmt-stat">
-                    <Users size={13} />
-                    <span>{c.studentCount}</span>
-                    <small>học viên</small>
-                  </div>
-                  <div className="mgmt-stat">
-                    <UserCheck size={13} />
-                    <span>{c.attendanceRate}%</span>
-                    <small>chuyên cần</small>
-                  </div>
-                  <div className="mgmt-stat">
-                    <BookOpen size={13} />
-                    <span>{c.sessionsDone}/{c.sessionsTotal}</span>
-                    <small>buổi</small>
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
+          ))}
+        </div>
+      ) : (
+        <section className="materials-section glass-panel">
+          <div className="personal-materials-header">
+            <h3>Tài liệu cá nhân của tôi</h3>
+            <button className="upload-btn" onClick={() => setShowUploadModal(true)}>
+              <Plus size={16} />
+              <Upload size={14} />
+              <span>Tải lên tài liệu cá nhân</span>
+            </button>
           </div>
-        ))}
-      </div>
+
+          <div className="materials-list">
+            {filteredPersonalMaterials.map(m => (
+              <div key={m.id} className="material-item-row glass-panel local-material">
+                <div className="material-info">
+                  {getMaterialIcon(m.fileType)}
+                  <div className="material-title-group">
+                    <span className="material-title">{m.title}</span>
+                    <span className="material-filename">{m.fileName}</span>
+                    <span className="material-uploader">Tải lên lúc: {new Date(m.uploadedAt).toLocaleString('vi-VN')}</span>
+                  </div>
+                  <span className="material-size">{m.fileSize}</span>
+                </div>
+                <div className="material-actions">
+                  <button 
+                    className="download-btn-icon" 
+                    title="Tải xuống"
+                    onClick={() => handleDownloadLocal(m)}
+                  >
+                    <Download size={14} />
+                  </button>
+                  <button 
+                    className="delete-btn-icon text-danger" 
+                    title="Xóa tài liệu"
+                    onClick={() => handleDeleteLocalMaterial(m.id, true)}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {filteredPersonalMaterials.length === 0 && (
+              <div className="no-materials">
+                {searchQuery ? 'Không tìm thấy tài liệu phù hợp.' : 'Kho tài liệu cá nhân của bạn hiện đang trống.'}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* Modal Tải lên tài liệu cho Tab Cá Nhân */}
+      {showUploadModal && activeTab === 'personal' && (
+        <div className="modal-overlay animate-fade-in" onClick={closeModal}>
+          <div className="modal-content glass-panel animate-scale-in" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Tải lên tài liệu cá nhân</h3>
+              <button className="close-btn-icon" onClick={closeModal} title="Đóng">
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={handleUploadSubmit} className="upload-form">
+              <div className="form-group">
+                <label htmlFor="material-title">Tên tài liệu hiển thị *</label>
+                <input
+                  id="material-title"
+                  type="text"
+                  placeholder="Ví dụ: Tài liệu ôn thi riêng tư..."
+                  value={uploadTitle}
+                  onChange={e => setUploadTitle(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="material-type">Loại tài liệu</label>
+                <select
+                  id="material-type"
+                  value={uploadType}
+                  onChange={e => setUploadType(e.target.value as any)}
+                >
+                  <option value="pdf">Tài liệu PDF (.pdf)</option>
+                  <option value="slide">Bài giảng PowerPoint (.ppt, .pptx)</option>
+                  <option value="video">Video bài giảng (.mp4, .webm)</option>
+                  <option value="image">Hình ảnh minh họa (.png, .jpg)</option>
+                </select>
+              </div>
+
+              <div 
+                className={`drag-drop-zone ${dragActive ? 'drag-active' : ''} ${selectedFile ? 'has-file' : ''}`}
+                onDragEnter={handleDrag}
+                onDragOver={handleDrag}
+                onDragLeave={handleDrag}
+                onDrop={handleDrop}
+                onClick={triggerFileInput}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="file-input-hidden"
+                  onChange={handleFileChange}
+                  accept=".pdf,.ppt,.pptx,.odp,.mp4,.webm,.avi,.mov,.png,.jpg,.jpeg,.gif,.svg,.webp"
+                />
+                
+                {selectedFile ? (
+                  <div className="selected-file-info animate-fade-in">
+                    {getMaterialIcon(uploadType)}
+                    <div className="file-meta">
+                      <p className="file-name">{selectedFile.name}</p>
+                      <p className="file-size">{formatFileSize(selectedFile.size)}</p>
+                    </div>
+                    <button 
+                      type="button" 
+                      className="remove-file-btn" 
+                      title="Hủy chọn tệp"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedFile(null);
+                      }}
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="drag-drop-prompt">
+                    <Upload className="upload-icon" size={32} />
+                    <p className="prompt-title">Kéo thả tệp tài liệu vào đây hoặc click để duyệt</p>
+                    <p className="prompt-subtitle">Chấp nhận tài liệu PDF, Slide, Video hoặc Hình ảnh</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="modal-actions-footer">
+                <button type="button" className="cancel-btn" onClick={closeModal}>
+                  Hủy bỏ
+                </button>
+                <button 
+                  type="submit" 
+                  className="submit-btn" 
+                  disabled={!selectedFile || !uploadTitle.trim()}
+                >
+                  Bắt đầu tải lên
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
