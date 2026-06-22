@@ -1,0 +1,73 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id         String   @id @default(uuid())
+  email      String   @unique
+  password   String
+  name       String
+  role       String   // 'student' | 'teacher' | 'manager' | 'admin'
+  status     String   @default("active") // 'active' | 'suspended'
+  lastActive String   @default("Đang hoạt động")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model ScheduledClass {
+  id        String   @id @default(uuid())
+  subject   String
+  time      String   // e.g. "10:00 - 11:30"
+  date      String   // e.g. "YYYY-MM-DD"
+  teacher   String
+  room      String
+  status    String   // "live" | "scheduled"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CourseMaterial {
+  id         String   @id @default(uuid())
+  courseId   String
+  title      String
+  fileName   String
+  fileType   String   // 'pdf' | 'slide' | 'video' | 'image'
+  fileSize   String
+  filePath   String
+  uploadedAt DateTime @default(now())
+  uploadedBy String
+  isPrivate  Boolean  @default(false)
+}
+
+model SessionReport {
+  id                   String                @id @default(uuid())
+  roomName             String
+  date                 String                // e.g. "DD/MM/YYYY"
+  presentStudents      Int
+  totalStudents        Int
+  avgDurationMins      Int
+  avgConnectionQuality String                // 'excellent' | 'good' | 'poor' | 'critical'
+  details              SessionReportDetail[]
+  createdAt            DateTime              @default(now())
+}
+
+model SessionReportDetail {
+  id              String        @id @default(uuid())
+  reportId        String
+  report          SessionReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  name            String
+  role            String
+  presentTimeMins Int
+  totalTimeMins   Int
+  pct             Float
+  ping            Float
+  jitter          Float
+  loss            Float
+}

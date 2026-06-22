@@ -1,137 +1,118 @@
-# Cấu trúc thư mục dự án (Project Directory Structure)
+# Cấu trúc thư mục Monorepo tối ưu (Production-Grade Monorepo Structure)
 
-Dưới đây là sơ đồ cấu trúc cây thư mục toàn bộ dự án **EduMeet Education Platform**:
+Dưới đây là sơ đồ cấu trúc cây thư mục toàn bộ dự án **EduMeet Distributed Platform** được thiết kế lại theo tiêu chuẩn Enterprise Monorepo, giúp quản lý tách biệt các ứng dụng (`apps/`), chia sẻ các hợp đồng kiểu dữ liệu (`packages/`), phân chia domain-driven rõ ràng (`features/` ở frontend và `modules/` ở backend), và phân vùng hạ tầng hoàn chỉnh.
 
 ```text
 education-platform/
-├── README.md                              # Giới thiệu dự án và hướng dẫn chung
-├── Cau_Truc_Thu_Muc.md                    # File này — sơ đồ cấu trúc cây thư mục
-├── .gitignore                             # Git ignore (bảo vệ nested repos)
 │
-├── docs/                                  # Tài liệu dự án (đổi tên từ Tai_Lieu/)
-│   ├── Business Requirement Document (BRD)/    # Yêu cầu nghiệp vụ
-│   │   ├── README.md
-│   │   ├── 01_Tong_Quan/
-│   │   │   ├── 01_Muc_Tieu_Du_An.md
-│   │   │   └── 02_Phan_Loai_Nguoi_Dung.md
-│   │   ├── 02_Phan_He_Nghiep_Vu/
-│   │   │   ├── 03_LMS.md
-│   │   │   ├── 04_Hoc_Truc_Tuyen.md
-│   │   │   ├── 05_Tai_Lieu.md
-│   │   │   ├── 06_Diem_Danh.md
-│   │   │   └── 11_Bao_Cao_Xuat_Du_Lieu.md
-│   │   ├── 03_Giam_Sat_Telemetry/
-│   │   │   ├── 07_Giam_Sat_Thoi_Gian_Thuc.md
-│   │   │   ├── 08_Telemetry_Network_Analytics.md
-│   │   │   ├── 09_Giam_Sat_Nguoi_Dung.md
-│   │   │   └── 10_Chan_Doan_Su_Co.md
-│   │   └── 04_Ket_Luan/
-│   │       └── 12_Ket_Luan.md
-│   │
-│   ├── Software Requirement Specification (SRS)/  # Đặc tả yêu cầu phần mềm
-│   │   ├── README.md
-│   │   ├── 01_Functional_Requirements.md
-│   │   ├── 02_Non_Functional_Requirements.md
-│   │   └── 03_System_Constraints.md
-│   │
-│   ├── User Stories & Use Cases/          # User Stories và ca sử dụng
-│   │   ├── README.md
-│   │   ├── 01_Use_Case_Diagrams.md
-│   │   ├── 02_Use_Case_Specifications.md
-│   │   ├── 03_User_Stories_Catalog.md
-│   │   └── 04_Acceptance_Criteria_Format_Standard.md
-│   │
-│   ├── Design & Process Workflows/        # Thiết kế quy trình & giao diện
-│   │   ├── README.md
-│   │   ├── 01_BPMN_Workflows.md
-│   │   ├── 02_Wireframes_Mockups.md
-│   │   ├── 03_LMS_Dashboard_Wireframe.md
-│   │   ├── 04_Realtime_Monitoring_Dashboard_Wireframe.md
-│   │   ├── 05_Online_Learning_Interface_Wireframe.md
-│   │   └── 06_Attendance_Interface_Wireframe.md
-│   │
-│   ├── Data Mapping/                      # Đặc tả ánh xạ dữ liệu
-│   │   ├── README.md
-│   │   ├── 01_Data_Mapping_Specification.md
-│   │   ├── 02_Data_Model_ERD.md
-│   │   └── 03_Data_Migration_Strategy.md
-│   │
-│   ├── Technical Requirement Document (TRD)/  # Yêu cầu kỹ thuật
-│   │   ├── README.md
-│   │   ├── 01_Kien_Truc/
-│   │   └── 02_Ke_Hoach_Va_Danh_Gia/
-│   │
-│   ├── Technical Design Document (TDD)/   # Thiết kế kỹ thuật chi tiết
-│   │   ├── README.md
-│   │   ├── 00-document-index.md
-│   │   ├── 01-system-overview.md
-│   │   ├── 02-domain-decomposition.md
-│   │   ├── 03-bounded-context-design.md
-│   │   ├── 04-service-design.md
-│   │   ├── 05-module-design.md
-│   │   ├── 06-api-design.md
-│   │   ├── 07-database-design.md
-│   │   ├── 08-event-design.md
-│   │   ├── 09-sequence-design.md
-│   │   ├── 10-realtime-design.md
-│   │   ├── 11-security-design.md
-│   │   ├── 12-deployment-configuration.md
-│   │   ├── 13-testing-design.md
-│   │   └── 14-traceability-matrix.md
-│   │
-│   ├── Solution Architecture Document (SAD)/  # Kiến trúc giải pháp
-│   │   ├── README.md
-│   │   ├── 01_Gioi_Thieu/
-│   │   ├── 02_Kien_Truc_Thiet_Ke/
-│   │   ├── 03_Cong_Nghe_Ha_Tang/
-│   │   └── 04_Ket_Luan_Phu_Luc/
-│   │
-│   └── artifacts/                         # Hình ảnh, mockups, file sinh tự động
+├── README.md                              # Giới thiệu dự án và hướng dẫn khởi chạy chung
+├── Cau_Truc_Thu_Muc.md                    # Sơ đồ cấu trúc cây thư mục (File này)
+├── .gitignore                             # Git ignore cho toàn bộ workspace
 │
-├── app/                                   # Frontend Web — EduMeet UI
-│   ├── package.json
-│   ├── vite.config.ts
-│   ├── tsconfig.json
-│   ├── .env.local                         # Dev config (gitignored)
-│   ├── .env.production                    # Production config (gitignored)
-│   └── src/
-│       ├── main.tsx                       # Entry point
-│       ├── App.tsx                        # Router chính
-│       ├── index.css                      # Global styles
-│       ├── components/                    # UI components
-│       │   ├── LoginPage.tsx
-│       │   ├── DashboardPage.tsx
-│       │   ├── WelcomeScreen.tsx          # Lobby — màn hình trước khi vào lớp
-│       │   ├── ClassroomScreen.tsx        # Màn hình lớp học chính
-│       │   ├── VideoGrid.tsx              # Lưới video participants
-│       │   ├── SidePanel.tsx              # Panel chat / điểm danh
-│       │   └── ControlBar.tsx             # Thanh điều khiển
-│       ├── context/
-│       │   └── ClassContext.tsx           # Global state (participants, chat, mock)
-│       └── lib/
-│           ├── jitsiService.ts            # WebRTC — kết nối Jitsi server
-│           └── mockData.ts                # Dữ liệu giả lập (dev mode)
+├── docs/                                  # Tài liệu phân tích nghiệp vụ & thiết kế hệ thống
+│   ├── BRD/                               # Business Requirement Document (Nghiệp vụ cốt lõi)
+│   ├── SRS/                               # Software Requirement Specification (Yêu cầu phần mềm)
+│   ├── TDD/                               # Technical Design Document (Thiết kế kỹ thuật chi tiết)
+│   ├── SAD/                               # Solution Architecture Document (Kiến trúc giải pháp)
+│   ├── ADR/                               # Architecture Decision Records (Lịch sử quyết định thiết kế)
+│   │   ├── 001-use-nestjs.md
+│   │   ├── 002-jitsi-over-livekit.md
+│   │   └── 003-prisma-over-typeorm.md
+│   └── artifacts/                         # Mockups, sơ đồ BPMN, hình ảnh xuất báo cáo
 │
-└── infrastructure/                        # Hạ tầng triển khai (MỚI)
-    │
-    ├── jitsi-deploy/                      # Docker Compose stack (đổi tên từ docker-jitsi/)
-    │   ├── docker-compose.yml             # 4 services: web, prosody, jicofo, jvb
-    │   ├── .env.template                  # Template cấu hình — copy thành .env
-    │   ├── .env                           # Cấu hình thật (gitignored — chứa passwords)
-    │   ├── gen-passwords.sh               # Script sinh passwords ngẫu nhiên
-    │   ├── README.md                      # Hướng dẫn deploy step-by-step
-    │   └── custom/                        # Files tùy chỉnh (lấy từ jitsi-src/)
-    │       ├── config.js                  # Cấu hình Jitsi (P2P tắt, toolbar lớp học)
-    │       ├── interface_config.js        # Thương hiệu EduMeet (tắt logo Jitsi)
-    │       └── main-vi.json               # Giao diện Tiếng Việt đầy đủ
-    │
-    └── jitsi-src/                         # Source code Jitsi Meet (để tham khảo)
-        │                                  # ⚠️ Nested git repo — không track bởi outer git
-        ├── config.js                      # Template cấu hình gốc (2000+ dòng)
-        ├── interface_config.js            # Template giao diện gốc
-        ├── lang/                          # 60+ ngôn ngữ (bao gồm vi)
-        ├── libs/                          # Pre-built JS bundles & WebAssembly
-        └── react/features/               # Source React của Jitsi Meet
+├── apps/                                  # Các ứng dụng trong hệ thống (Applications Workspace)
+│   │
+│   ├── web/                               # 1. Frontend Web Client — EduMeet UI (Vite + TS)
+│   │   ├── package.json
+│   │   ├── vite.config.ts
+│   │   ├── tsconfig.json
+│   │   └── src/
+│   │       ├── main.tsx                   # Điểm khởi chạy (Entry point)
+│   │       ├── App.tsx                    # Router & cấu trúc định tuyến chính
+│   │       ├── index.css                  # Styling toàn cục
+│   │       │
+│   │       ├── core/                      # Cấu hình lõi hệ thống
+│   │       │   ├── router/                # Hệ thống định tuyến Router
+│   │       │   ├── providers/             # Providers quản lý (Theme, Auth, ClassContext)
+│   │       │   └── api/                   # Axios Client, Interceptors gọi lên Backend
+│   │       │
+│   │       ├── features/                  # Domain-driven features (Mã nguồn chứa UI + Logic theo tính năng)
+│   │       │   ├── auth/                  # Đăng nhập, đăng ký, phiên làm việc
+│   │       │   ├── dashboard/             # Bảng điều khiển, thống kê nhanh
+│   │       │   ├── courses/               # Quản lý khóa học, danh sách tài liệu
+│   │       │   ├── meeting/               # Phòng họp trực tuyến (VideoGrid, Classroom, ControlBar)
+│   │       │   ├── telemetry/             # Telemetry Network (Ping, Loss, Jitter, Alert Engine)
+│   │       │   ├── attendance/            # Điểm danh học viên, chia nhóm Breakout Rooms
+│   │       │   └── reports/               # Lọc dữ liệu, in PDF, kết xuất Excel
+│   │       │
+│   │       ├── pages/                     # Route Composition (Chỉ lắp ghép Feature vào Route, không chứa logic)
+│   │       │   ├── DashboardPage.tsx      # Lắp ghép DashboardFeature
+│   │       │   ├── CalendarPage.tsx       # Lắp ghép CalendarFeature
+│   │       │   ├── CoursePage.tsx         # Lắp ghép CoursesFeature
+│   │       │   ├── LoginPage.tsx          # Lắp ghép AuthFeature
+│   │       │   └── ReportsPage.tsx        # Lắp ghép ReportsFeature
+│   │       │
+│   │       └── shared/                    # UI Components & Hooks dùng chung toàn ứng dụng
+│   │           ├── components/            # Button, Modal, Card thiết kế mờ dùng chung
+│   │           └── hooks/                 # Custom hooks tiện ích (useWindowSize, useOutsideClick...)
+│   │
+│   └── api/                               # 2. Backend API Server (NestJS + TS)
+│       ├── package.json
+│       ├── tsconfig.json
+│       ├── nest-cli.json
+│       ├── prisma/                        # ORM Schema & Database migrations
+│       │   ├── schema.prisma              # Thiết kế cơ sở dữ liệu PostgreSQL
+│       │   └── migrations/                # Lịch sử SQL migrations
+│       └── src/
+│           ├── main.ts                    # Entry point của server NestJS
+│           ├── app.module.ts              # Module gốc ứng dụng
+│           │
+│           ├── core/                      # Guards, Interceptors, Filters, Loggers toàn hệ thống
+│           │   ├── guards/                # AuthGuard, RolesGuard
+│           │   ├── interceptors/          # TransformInterceptor, TelemetryCollectorInterceptor
+│           │   └── filters/               # HttpExceptionFilter
+│           │
+│           ├── database/                  # Quản lý kết nối DB (Prisma Service)
+│           │   ├── database.module.ts
+│           │   └── prisma.service.ts
+│           │
+│           ├── modules/                   # Các mô-đun nghiệp vụ (Modular Monolith)
+│           │   ├── auth/                  # JWT Authentication (Đăng ký, Đăng nhập)
+│           │   ├── user/                  # Quản lý tài khoản, phân quyền người dùng
+│           │   ├── course/                # Quản lý khóa học (Courses)
+│           │   ├── class/                 # Quản lý lớp học & lịch giảng dạy (ScheduledClass)
+│           │   ├── meeting/               # Quản lý trạng thái phòng họp trực tiếp
+│           │   ├── attendance/            # Log điểm danh, xử lý chia phòng breakout
+│           │   ├── telemetry/             # API thu thập số liệu mạng từ client gửi lên
+│           │   ├── notification/          # Xử lý thông báo (Email nhắc nhở, cảnh báo nghỉ học)
+│           │   ├── file/                  # Quản lý tải lên (Multer), lưu trữ tài liệu & file ghi hình
+│           │   └── reporting/             # Xử lý báo cáo chuyên cần tuần/tháng
+│           │
+│           ├── integrations/              # Tương tác với dịch vụ hạ tầng bên ngoài
+│           │   ├── jitsi/                 # Tích hợp & sinh token kết nối Jitsi Meet
+│           │   ├── redis/                 # Bộ nhớ đệm cache (session state, rate limit)
+│           │   └── storage/               # Tích hợp lưu trữ tệp (S3, MinIO hoặc local storage)
+│           │
+│           └── common/                    # CHỈ chứa Constants, Enums, Interfaces, Decorators dùng chung
+│
+├── packages/                              # Monorepo shared contracts (Chia sẻ kiểu dữ liệu giữa các apps)
+│   ├── shared-types/                      # Định nghĩa TypeScript Types dùng chung (FE & BE)
+│   ├── contracts/                         # API schemas / DTO contracts (Zod schemas hoặc validator models)
+│   └── sdk/                               # Thư viện client helper (edumeetClient) cho FE gọi API
+│
+└── infrastructure/                        # Triển khai hạ tầng & Docker Compose
+    ├── media/                             # Hạ tầng truyền thông trực tuyến (Media server)
+    │   └── jitsi/                         # Docker Compose Jitsi Meet (web, prosody, jicofo, jvb)
+    ├── data/                              # Cơ sở dữ liệu & các dịch vụ lưu trữ dữ liệu
+    │   ├── postgres/                      # Tệp cấu hình DB PostgreSQL
+    │   └── redis/                         # Cache database
+    ├── messaging/                         # Message broker / Task queue quản lý tác vụ bất đồng bộ
+    │   ├── bullmq/                        # Cấu hình Task queue xử lý báo cáo, email
+    │   └── kafka/                         # Message broker thu thập telemetry phân tán
+    ├── monitoring/                        # Giám sát hệ thống (Telemetry Analytics)
+    │   ├── prometheus/                    # Thu thập chỉ số hệ thống
+    │   └── grafana/                       # Dashboard trực quan hóa chỉ số hạ tầng
+    └── scripts/                           # Script shell tự động hóa (Backup DB, dọn dẹp logs)
 ```
 
 ---
@@ -140,17 +121,18 @@ education-platform/
 
 | Thư mục | Vai trò | Trạng thái git |
 |---|---|---|
-| `docs/` | Tài liệu nghiệp vụ & kỹ thuật | ✅ Tracked |
-| `app/` | Frontend React/Vite/TypeScript | ✅ Tracked |
-| `infrastructure/jitsi-deploy/` | Docker Compose + config triển khai | ✅ Tracked |
-| `infrastructure/jitsi-src/` | Jitsi Meet source (tham khảo) | ❌ Gitignored (nested repo) |
+| `docs/` | Phân tích nghiệp vụ, kiến trúc giải pháp & hồ sơ quyết định (ADR) | ✅ Tracked |
+| `apps/web/` | Frontend Web Client (React / Vite) | ✅ Tracked |
+| `apps/api/` | Backend REST / WebSockets Server (NestJS / Prisma) | ✅ Tracked |
+| `packages/` | Các package chia sẻ kiểu dữ liệu (Shared Types / Contracts) | ✅ Tracked |
+| `infrastructure/` | Triển khai Docker & Monitoring cho toàn bộ Platform | ✅ Tracked |
 
 ---
 
-## Luồng phát triển
+## Luồng phát triển mở rộng (Dev & Deploy Pipeline)
 
 ```
-[docs/] → Tài liệu → [app/] → Code frontend → [infrastructure/] → Deploy
+[docs/ADR] → [packages/shared-types] → [apps/api] + [apps/web] → [infrastructure] (Triển khai & Giám sát)
 ```
 
-**Cập nhật lần cuối:** 2026-06-19
+**Cập nhật lần cuối:** 2026-06-22

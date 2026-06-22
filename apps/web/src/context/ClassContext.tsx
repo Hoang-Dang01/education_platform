@@ -49,7 +49,7 @@ export interface Participant {
 }
 
 // Các trang trong LMS shell — gồm cả trang quản trị (users) và giám sát (monitoring)
-export type LmsPage = 'dashboard' | 'courses' | 'reports' | 'lobby' | 'users' | 'monitoring';
+export type LmsPage = 'dashboard' | 'courses' | 'reports' | 'lobby' | 'users' | 'monitoring' | 'calendar';
 
 export interface ChatMessage {
   id: string;
@@ -128,7 +128,7 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [screen, setScreen] = useState<'lms' | 'classroom'>('lms');
   const [activePage, setActivePageState] = useState<LmsPage>(() => {
     const hash = window.location.hash.replace('#', '') as LmsPage;
-    const validPages: LmsPage[] = ['dashboard', 'courses', 'reports', 'lobby', 'users', 'monitoring'];
+    const validPages: LmsPage[] = ['dashboard', 'courses', 'reports', 'lobby', 'users', 'monitoring', 'calendar'];
     return validPages.includes(hash) ? hash : 'dashboard';
   });
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -149,7 +149,7 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     const handleHashChange = () => {
       const hash = window.location.hash.replace('#', '') as LmsPage;
-      const validPages: LmsPage[] = ['dashboard', 'courses', 'reports', 'lobby', 'users', 'monitoring'];
+      const validPages: LmsPage[] = ['dashboard', 'courses', 'reports', 'lobby', 'users', 'monitoring', 'calendar'];
       if (validPages.includes(hash)) {
         setActivePageState(hash);
       }
@@ -157,7 +157,7 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     // Đặt hash ban đầu nếu chưa có hash hợp lệ trên URL
     const currentHash = window.location.hash.replace('#', '') as LmsPage;
-    const validPages: LmsPage[] = ['dashboard', 'courses', 'reports', 'lobby', 'users', 'monitoring'];
+    const validPages: LmsPage[] = ['dashboard', 'courses', 'reports', 'lobby', 'users', 'monitoring', 'calendar'];
     if (!validPages.includes(currentHash)) {
       window.location.hash = activePage;
     }
@@ -963,7 +963,7 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     
     // Đọc hash nếu có sẵn từ trước, nếu không thì mặc định là dashboard
     const hash = window.location.hash.replace('#', '') as LmsPage;
-    const validPages: LmsPage[] = ['dashboard', 'courses', 'reports', 'lobby', 'users', 'monitoring'];
+    const validPages: LmsPage[] = ['dashboard', 'courses', 'reports', 'lobby', 'users', 'monitoring', 'calendar'];
     if (validPages.includes(hash)) {
       setActivePageState(hash);
     } else {

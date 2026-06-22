@@ -6,7 +6,8 @@ import { CoursesPage } from '../../pages/CoursesPage/CoursesPage';
 import { ReportsPage } from '../../pages/ReportsPage/ReportsPage';
 import { UserManagementPage } from '../../pages/UserManagementPage/UserManagementPage';
 import { MonitoringPage } from '../../pages/MonitoringPage/MonitoringPage';
-import { LayoutDashboard, BookOpen, BarChart3, Video, User, Bell, Shield, LogOut, Sun, Moon, Users, MonitorPlay } from 'lucide-react';
+import { CalendarPage } from '../../pages/CalendarPage/CalendarPage';
+import { LayoutDashboard, BookOpen, BarChart3, Video, User, Bell, Shield, LogOut, Sun, Moon, Users, MonitorPlay, Calendar } from 'lucide-react';
 import { can, roleLabel } from '../../lib/roles';
 import './LmsShell.css';
 
@@ -28,6 +29,8 @@ export const LmsShell: React.FC = () => {
     switch (activePage) {
       case 'dashboard':
         return <DashboardPage />;
+      case 'calendar':
+        return <CalendarPage />;
       case 'courses':
         return <CoursesPage />;
       case 'reports':
@@ -63,6 +66,14 @@ export const LmsShell: React.FC = () => {
           >
             <LayoutDashboard size={18} />
             <span>Bảng điều khiển</span>
+          </button>
+
+          <button
+            onClick={() => setActivePage('calendar')}
+            className={`nav-item ${activePage === 'calendar' ? 'active' : ''}`}
+          >
+            <Calendar size={18} />
+            <span>Lịch biểu</span>
           </button>
 
           <button
@@ -140,6 +151,7 @@ export const LmsShell: React.FC = () => {
             <span className="separator">/</span>
             <span className="active-breadcrumb">
               {activePage === 'dashboard' && 'Bảng điều khiển'}
+              {activePage === 'calendar' && 'Lịch biểu'}
               {activePage === 'courses' && coursesLabel}
               {activePage === 'reports' && 'Báo cáo chuyên cần'}
               {activePage === 'monitoring' && 'Giám sát lớp học'}

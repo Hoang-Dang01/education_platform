@@ -28,12 +28,14 @@ const KPI_ICONS: Record<KpiIconName, React.ReactNode> = {
 export const DashboardPage: React.FC = () => {
   const { role, joinRoom, userName } = useClass();
   const [classes, setClasses] = useState<ScheduledClass[]>([]);
+  const [dateFilter, setDateFilter] = useState<'today' | 'tomorrow' | 'all'>('today');
   
   // States for Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editClass, setEditClass] = useState<ScheduledClass | null>(null);
   const [subject, setSubject] = useState('');
   const [time, setTime] = useState('');
+  const [date, setDate] = useState('');
   const [teacher, setTeacher] = useState('');
   const [room, setRoom] = useState('');
   const [status, setStatus] = useState<'live' | 'scheduled'>('scheduled');
@@ -49,6 +51,7 @@ export const DashboardPage: React.FC = () => {
       setEditClass(cls);
       setSubject(cls.subject);
       setTime(cls.time);
+      setDate(cls.date);
       setTeacher(cls.teacher);
       setRoom(cls.room);
       setStatus(cls.status);
@@ -56,6 +59,7 @@ export const DashboardPage: React.FC = () => {
       setEditClass(null);
       setSubject('');
       setTime('08:00 - 09:30');
+      setDate(new Date().toISOString().split('T')[0]);
       setTeacher(role === 'teacher' ? (userName || 'Thầy Nguyễn Hải Nam') : 'Cô Lê Thu Thảo');
       setRoom('phong-' + Math.floor(Math.random() * 900 + 100));
       setStatus('scheduled');
@@ -70,7 +74,7 @@ export const DashboardPage: React.FC = () => {
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!subject.trim() || !time.trim() || !teacher.trim() || !room.trim()) {
+    if (!subject.trim() || !time.trim() || !date.trim() || !teacher.trim() || !room.trim()) {
       alert('Vui lòng điền đầy đủ thông tin lịch học');
       return;
     }
@@ -78,6 +82,7 @@ export const DashboardPage: React.FC = () => {
       id: editClass?.id || 'class-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
       subject,
       time,
+      date,
       teacher,
       room,
       status
@@ -92,6 +97,31 @@ export const DashboardPage: React.FC = () => {
       deleteScheduledClass(id);
       setClasses(getScheduledClasses());
     }
+  };
+
+  const getTodayDateStr = () => new Date().toISOString().split('T')[0];
+  const getTomorrowDateStr = () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toISOString().split('T')[0];
+  };
+
+  const filteredClasses = classes.filter(cls => {
+    if (dateFilter === 'today') return cls.date === getTodayDateStr();
+    if (dateFilter === 'tomorrow') return cls.date === getTomorrowDateStr();
+    return true;
+  });
+
+  const formatDateLabel = (dateStr: string) => {
+    if (!dateStr) return '';
+    const today = getTodayDateStr();
+    const tomorrow = getTomorrowDateStr();
+    if (dateStr === today) return 'Hôm nay';
+    if (dateStr === tomorrow) return 'Ngày mai';
+    
+    // DD/MM format
+    const [, m, d] = dateStr.split('-');
+    return d && m ? `${d}/${m}` : dateStr;
   };
 
   const isEditable = role === 'teacher' || role === 'manager' || role === 'admin';
@@ -131,7 +161,7 @@ export const DashboardPage: React.FC = () => {
 
         {/* Left Side: Lịch học/dạy (schedule) hoặc Lớp đang diễn ra (live) */}
         <section className="dashboard-section glass-panel">
-          <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
             <h3>{data.listTitle}</h3>
             {data.listType === 'schedule' && isEditable && (
               <button className="add-class-btn" onClick={() => handleOpenModal(null)}>
@@ -141,14 +171,43 @@ export const DashboardPage: React.FC = () => {
             )}
           </div>
 
+          {/* Date Filter Tabs for Schedules */}
+          {data.listType === 'schedule' && (
+            <div className="date-tabs-row" style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.25rem' }}>
+              <button 
+                onClick={() => setDateFilter('today')}
+                className={`date-tab-btn ${dateFilter === 'today' ? 'active' : ''}`}
+              >
+                Hôm nay
+              </button>
+              <button 
+                onClick={() => setDateFilter('tomorrow')}
+                className={`date-tab-btn ${dateFilter === 'tomorrow' ? 'active' : ''}`}
+              >
+                Ngày mai
+              </button>
+              <button 
+                onClick={() => setDateFilter('all')}
+                className={`date-tab-btn ${dateFilter === 'all' ? 'active' : ''}`}
+              >
+                Tất cả lịch
+              </button>
+            </div>
+          )}
+
           {data.listType === 'schedule' ? (
             <div className="class-cards-list">
-              {classes.map(cls => (
+              {filteredClasses.map(cls => (
                 <div key={cls.id} className="class-item-card glass-panel">
                   <div className="class-item-details">
-                    <span className="class-item-time">
-                      <Clock size={12} />
-                      <span>{cls.time}</span>
+                    <span className="class-item-time" style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <Clock size={12} />
+                        <span>{cls.time}</span>
+                      </span>
+                      <span className="date-tag-badge" style={{ background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+                        {formatDateLabel(cls.date)}
+                      </span>
                     </span>
                     <h4>{cls.subject}</h4>
                     <p className="teacher-name">{cls.teacher} · phòng {cls.room}</p>
@@ -179,9 +238,9 @@ export const DashboardPage: React.FC = () => {
                   </div>
                 </div>
               ))}
-              {classes.length === 0 && (
+              {filteredClasses.length === 0 && (
                 <div className="no-materials" style={{ textAlign: 'center', padding: '2rem' }}>
-                  Chưa xếp lịch giảng dạy nào.
+                  Chưa xếp lịch giảng dạy nào trong ngày này.
                 </div>
               )}
             </div>
@@ -256,15 +315,26 @@ export const DashboardPage: React.FC = () => {
                 />
               </div>
 
-              <div className="form-group">
-                <label>Thời Gian Học</label>
-                <input
-                  type="text"
-                  placeholder="Ví dụ: 10:00 - 11:30"
-                  value={time}
-                  onChange={e => setTime(e.target.value)}
-                  required
-                />
+              <div className="form-group" style={{ display: 'flex', flexDirection: 'row', gap: '1rem' }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <label>Ngày Học</label>
+                  <input
+                    type="date"
+                    value={date}
+                    onChange={e => setDate(e.target.value)}
+                    required
+                  />
+                </div>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <label>Giờ Học</label>
+                  <input
+                    type="text"
+                    placeholder="Ví dụ: 10:00 - 11:30"
+                    value={time}
+                    onChange={e => setTime(e.target.value)}
+                    required
+                  />
+                </div>
               </div>
 
               <div className="form-group">

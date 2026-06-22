@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "paths": {
+      "@edumeet/shared-types": ["./packages/shared-types"],
+      "@edumeet/contracts": ["./packages/contracts"],
+      "@edumeet/sdk": ["./packages/sdk"]
+    }
+  }
+}

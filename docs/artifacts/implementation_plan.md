@@ -1,94 +1,115 @@
-# Kế hoạch Triển khai — Tích hợp lib-jitsi-meet & WebRTC (Phase 0.3)
+# Kế Hoạch Thiết Lập Cấu Trúc Monorepo Vật Lý — EduMeet (NPM Workspaces)
 
-Bản kế hoạch này tập trung vào việc tích hợp thư viện **WebRTC Low-Level (lib-jitsi-meet)** vào giao diện React UI hiện có, thay thế dữ liệu giả lập (Mock Data) bằng kết nối luồng thật, xử lý sự kiện điểm danh và giám sát chất lượng kết nối thời gian thực (Telemetry) đúng theo yêu cầu BRD.
-
----
-
-## User Review Required
-
-> [!IMPORTANT]
-> 1. **Cấu hình HTTPS / Localhost:** Cuộc gọi camera/mic của trình duyệt yêu cầu môi trường bảo mật. Khi chạy cục bộ, bạn truy cập qua `http://localhost:5173/` (hợp lệ). Nếu kiểm thử giữa nhiều thiết bị, cần triển khai HTTPS hoặc dùng tunnel (ngrok).
-> 2. **Máy chủ Jitsi mặc định:** Chúng tôi đề xuất kết nối tới máy chủ công cộng ổn định `meet.jit.si` (cấu hình websocket/BOSH) để kiểm thử miễn phí.
+Kế hoạch này mô tả các bước di chuyển thư mục, cấu hình dự án, liên kết TypeScript path aliases và thiết lập shared packages cho toàn bộ hệ thống EduMeet.
 
 ---
 
-## Open Questions
+## Các Phase Thực Hiện
 
-> [!WARNING]
-> * **Bạn có muốn tùy cấu hình tên miền Jitsi Server riêng biệt không?** Hiện tại chúng tôi sẽ cấu hình mặc định kết nối tới `meet.jit.si`. Nếu bạn đã có server Jitsi tự cài đặt, hãy cung cấp địa chỉ IP/Domain để tôi điền vào cấu hình.
+### Phase 1 — Restructure thư mục
 
----
+#### 1. Tạo thư mục workspace
+Tạo các thư mục cấu trúc chính ở root:
+*   `apps/`
+*   `packages/`
 
-## Proposed Changes
+#### 2. Di chuyển các ứng dụng hiện tại
+*   Di chuyển `app/` (React Frontend) -> `apps/web/`
+*   Di chuyển `backend/` (NestJS Backend) -> `apps/api/`
 
-### Component 1: Cấu hình Polyfills & Bundler Shims (main.tsx & vite.config.ts)
-
-Thư viện `lib-jitsi-meet` sử dụng môi trường kiểu Node/Webpack truyền thống, yêu cầu một số biến toàn cục (`global`, `process.env`, `jQuery`). Chúng ta cần shim các biến này trước khi load thư viện.
-
-#### [MODIFY] [main.tsx](file:///c:/Git%20cua%20tui/education-platform/app/src/main.tsx)
-- Import và gán `jquery` vào `window.$` và `window.jQuery`.
-- Gán `window.global` trỏ về `window`.
-- Định nghĩa biến giả lập `window.process = { env: {} }`.
-
----
-
-### Component 2: Xây dựng Jitsi Connector Service (jitsiService.ts)
-
-#### [NEW] [jitsiService.ts](file:///c:/Git%20cua%20tui/education-platform/app/src/lib/jitsiService.ts)
-- Khởi tạo thư viện `JitsiMeetJS` bằng cấu hình chuẩn kết nối WebSocket (`wss://meet.jit.si/xmpp-websocket`) và BOSH BIND (`https://meet.jit.si/http-bind`).
-- Triển khai lớp `JitsiService` quản lý:
-  - Khởi tạo đối tượng `JitsiConnection`.
-  - Khởi tạo đối tượng `JitsiConference` (Phòng học trực tuyến).
-  - Khởi tạo luồng local tracks (Audio/Video từ webcam và microphone của người dùng).
-- Cung cấp các hàm điều khiển thiết bị: `muteAudio()`, `muteVideo()`, `startScreenShare()`, `stopScreenShare()`.
+#### 3. Khởi tạo các shared packages sơ khai
+Tạo các thư mục bên trong `packages/`:
+*   `packages/shared-types/`
+*   `packages/contracts/`
+*   `packages/sdk/`
 
 ---
 
-### Component 3: Kết nối WebRTC với ClassContext (ClassContext.tsx)
+### Phase 2 — Workspace configuration
 
-#### [MODIFY] [ClassContext.tsx](file:///c:/Git%20cua%20tui/education-platform/app/src/context/ClassContext.tsx)
-- Cập nhật các hàm `joinRoom` và `leaveRoom` để gọi trực tiếp các phương thức kết nối/ngắt kết nối của `JitsiService`.
-- Đăng ký lắng nghe sự kiện của `JitsiConference`:
-  - `TRACK_ADDED`: Thêm track audio/video từ học viên khác.
-  - `TRACK_REMOVED`: Gỡ track.
-  - `USER_JOINED` / `USER_LEFT`: Cập nhật danh sách học viên hiện diện.
-  - `DOMINANT_SPEAKER_CHANGED`: Phát hiện ai đang phát biểu để kích hoạt viền sáng (active-speaker).
-  - `CONNECTION_STATS`: Lấy dữ liệu trễ mạng (RTT/Ping), jitter, packet loss thực tế của từng học viên.
-- **Cơ chế Fallback thông minh:** Nếu kết nối Jitsi thất bại, hệ thống tự động fallback về Mock Data để đảm bảo UI không bị crash và vẫn có thể demo/kiểm thử bình thường.
+#### 4. Tạo root `package.json`
+Tạo mới file `package.json` ở thư mục gốc khai báo workspaces và các lệnh chạy liên kết:
+```json
+{
+  "name": "education-platform",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev -w apps/web",
+    "dev:api": "npm run start:dev -w apps/api",
+    "build:web": "npm run build -w apps/web",
+    "build:api": "npm run build -w apps/api",
+    "lint:web": "npm run lint -w apps/web",
+    "lint:api": "npm run lint -w apps/api",
+    "test:web": "npm run test -w apps/web",
+    "test:api": "npm run test -w apps/api"
+  }
+}
+```
+
+#### 5. Khởi tạo cấu hình cho shared packages
+Tạo file `packages/shared-types/package.json`:
+```json
+{
+  "name": "@edumeet/shared-types",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "types": "index.ts"
+}
+```
+Tạo file rỗng `packages/shared-types/index.ts` làm điểm xuất dữ liệu types.
+
+#### 6. Cấu hình root TypeScript aliases
+Tạo file `tsconfig.base.json` ở thư mục gốc để quản lý đường dẫn aliases dùng chung:
+```json
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@edumeet/shared-types": ["packages/shared-types"],
+      "@edumeet/contracts": ["packages/contracts"]
+    }
+  }
+}
+```
+
+#### 7. Cập nhật cấu hình TypeScript kế thừa (tsconfig extends)
+*   **Web (`apps/web/tsconfig.json`)**: Bổ sung kế thừa từ `tsconfig.base.json`.
+*   **API (`apps/api/tsconfig.json`)**: Bổ sung kế thừa từ `tsconfig.base.json`.
 
 ---
 
-### Component 4: Hiển thị Video Thực tế (VideoGrid.tsx & ParticipantVideo)
+### Phase 3 — Dependency cleanup
 
-#### [MODIFY] [VideoGrid.tsx](file:///c:/Git%20cua%20tui/education-platform/app/src/components/VideoGrid.tsx)
-- Chuyển tiếp các đối tượng Track thực tế từ `JitsiMeetJS` vào thẻ HTML5 `<video>` và `<audio>`.
-- Sử dụng hàm `track.attach(element)` để liên kết luồng stream của Jitsi vào DOM React một cách an toàn mà không bị rò rỉ bộ nhớ khi component bị unmount.
+#### 8. Dọn dẹp thư mục dependencies cũ
+Xóa bỏ toàn bộ:
+*   `apps/web/node_modules/`
+*   `apps/api/node_modules/`
+*   `apps/web/package-lock.json`
+*   `apps/api/package-lock.json`
 
----
-
-### Component 5: Phân tích & Ghi nhận Telemetry Mạng (SidePanel.tsx & ReportsPage.tsx)
-
-- Đọc các tham số telemetry thực tế trả về từ sự kiện `CONNECTION_STATS` để hiển thị cột sóng kết nối của học viên.
-- Phân tích và đánh giá chất lượng mạng theo 4 cấp độ đúng chuẩn BRD:
-  - **Excellent**: Latency < 100ms, Packet Loss < 1%, Jitter < 20ms
-  - **Good**: Latency 100-200ms, Packet Loss 1-3%, Jitter 20-30ms
-  - **Poor**: Latency 200-300ms, Packet Loss 3-5%, Jitter 30-50ms
-  - **Critical**: Latency > 300ms, Packet Loss > 5%, Jitter > 50ms
+#### 9. Reinstall & Link dependencies
+Chạy lệnh `npm install` tại thư mục gốc để:
+*   NPM tự động tải và hoist các gói thư viện trùng nhau lên root.
+*   Thiết lập liên kết symlink giữa `@edumeet/shared-types` và các ứng dụng.
 
 ---
 
-## Verification Plan
+## Kế Hoạch Xác Minh (Verification Plan)
 
-### Automated/Unit Verification
-- Biên dịch ứng dụng (`npm run build`) để kiểm tra lỗi kiểu TypeScript hoặc các lỗi liên kết thư viện tĩnh (ESM issues).
+### 1. Kiểm tra cấu trúc liên kết:
+*   Chạy lệnh `npm ls --workspaces` để xác minh NPM nhận diện đủ các workspaces.
 
-### Manual Verification
-1. **Kiểm thử Camera/Mic Preview (Lobby):**
-   - Đăng nhập, nhập tên phòng và kiểm tra camera có hiển thị luồng cục bộ trước khi vào lớp.
-2. **Kiểm thử Kết nối Đa điểm (Multi-peer testing):**
-   - Mở 2 tab trình duyệt cùng join vào 1 phòng để kiểm thử truyền nhận hình ảnh và âm thanh hai chiều.
-   - Thử bật/tắt thiết bị xem icon Mic/Camera trên UI có đồng bộ trạng thái.
-3. **Kiểm thử Chia sẻ màn hình (Screen Sharing):**
-   - Click nút chia sẻ màn hình trên toolbar, kiểm tra xem luồng hình ảnh của slide chiếu có hiển thị lên khung chính ở tab thứ hai.
-4. **Kiểm thử Telemetry thực tế:**
-   - Xem số đo ping/jitter hiển thị trên thanh danh sách học viên có nhảy chỉ số thực tế thay vì cố định.
+### 2. Kiểm thử biên dịch:
+*   Chạy `npm run build:web` kiểm tra frontend build.
+*   Chạy `npm run build:api` kiểm tra backend build & Prisma schema generator.
+
+### 3. Kiểm thử Runtime:
+*   Chạy `npm run dev:web` kiểm tra Vite và render page.
+*   Chạy `npm run dev:api` kiểm tra NestJS và kết nối PostgreSQL.
+
+### 4. Kiểm thử Shared Packages:
+*   Thử nghiệm import một kiểu dữ liệu từ `@edumeet/shared-types` vào `apps/web/` và `apps/api/` để xác nhận TS compile thành công.
