@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useClass } from '../../context/ClassContext';
 import {
   Mic,
@@ -11,8 +11,10 @@ import {
   Users,
   PhoneOff,
   Loader2,
+  Circle,
 } from 'lucide-react';
 import { isInstructor } from '../../lib/roles';
+import { saveMaterial } from '../../lib/localDb';
 import './ControlBar.css';
 
 export const ControlBar: React.FC = () => {
@@ -39,7 +41,74 @@ export const ControlBar: React.FC = () => {
     participants,
     screenSharingUserId,
     screenStream,
+    roomName,
+    userName,
   } = useClass();
+
+  // Recording states
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+
+  useEffect(() => {
+    let interval: any;
+    if (isRecording) {
+      interval = setInterval(() => {
+        setRecordingSeconds(prev => prev + 1);
+      }, 1000);
+    } else {
+      setRecordingSeconds(0);
+    }
+    return () => clearInterval(interval);
+  }, [isRecording]);
+
+  const formatTimer = () => {
+    const mins = Math.floor(recordingSeconds / 60);
+    const secs = recordingSeconds % 60;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
+
+  const handleToggleRecording = async () => {
+    if (!isRecording) {
+      setIsRecording(true);
+      setRecordingSeconds(0);
+    } else {
+      setIsRecording(false);
+      const finalSecs = recordingSeconds;
+      const formattedTime = `${Math.floor(finalSecs / 60)} phút ${finalSecs % 60} giây`;
+      
+      const getCourseId = (room: string): string => {
+        const r = room.toLowerCase();
+        if (r.includes('toan')) return 'c1';
+        if (r.includes('ly')) return 'c2';
+        if (r.includes('hoa')) return 'c3';
+        return 'c1';
+      };
+      
+      const today = new Date();
+      const dateStr = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
+      
+      try {
+        const mockVideoBlob = new Blob(["mock video stream data"], { type: 'video/mp4' });
+        const courseId = getCourseId(roomName);
+        
+        await saveMaterial({
+          id: 'rec-' + Date.now(),
+          courseId: courseId,
+          title: `Video ghi hình buổi học ngày ${dateStr}`,
+          fileName: `ghi_hinh_${roomName}_${Date.now()}.mp4`,
+          fileType: 'video',
+          fileSize: `${(finalSecs * 0.12).toFixed(1)} MB`,
+          fileBlob: mockVideoBlob,
+          uploadedAt: today.toISOString(),
+          uploadedBy: userName || 'Giáo viên',
+        });
+        
+        alert(`Ghi hình thành công!\nBản ghi hình (${formattedTime}) đã được tự động lưu vào tài liệu môn học.`);
+      } catch (err) {
+        console.error('Lỗi khi lưu video ghi hình:', err);
+      }
+    }
+  };
 
   const canShareDirectly = isInstructor(role);
   const isLocalSharing = screenSharingUserId === 'local-user' || screenStream !== null;
@@ -76,7 +145,6 @@ export const ControlBar: React.FC = () => {
     if (!panelOpen) {
       setActiveTab('attendance');
     } else if (activeTab === 'attendance') {
-      // Just close or switch
       setActiveTab('attendance');
     } else {
       setActiveTab('attendance');
@@ -108,6 +176,24 @@ export const ControlBar: React.FC = () => {
 
         {/* Section 2: Shared features */}
         <div className="control-group">
+          {/* Recording Button (only for teacher role) */}
+          {isInstructor(role) && (
+            <button
+              onClick={handleToggleRecording}
+              className={`action-btn ${isRecording ? 'recording-active' : 'idle'}`}
+              title={isRecording ? 'Dừng Ghi Hình' : 'Bắt Đầu Ghi Hình'}
+            >
+              {isRecording ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <span className="animate-pulse" style={{ width: '8px', height: '8px', background: '#ff4d4d', borderRadius: '50%' }}></span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#ff4d4d' }}>{formatTimer()}</span>
+                </div>
+              ) : (
+                <Circle size={26} />
+              )}
+            </button>
+          )}
+
           <button
             onClick={requestScreenShare}
             className={`action-btn ${shareBtnClass}`}
@@ -164,3 +250,4 @@ export const ControlBar: React.FC = () => {
     </div>
   );
 };
+

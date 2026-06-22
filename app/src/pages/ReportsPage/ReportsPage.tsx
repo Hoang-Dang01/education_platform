@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Download, CheckCircle2, Clock, ArrowLeft } from 'lucide-react';
+import { Download, CheckCircle2, Clock, ArrowLeft, Search, Calendar, Filter, Mail, Printer } from 'lucide-react';
 import { mockReportSessions } from '../../lib/mockData';
 import { getSessionReports } from '../../lib/localDb';
 import type { SessionReport } from '../../lib/localDb';
@@ -8,6 +8,19 @@ import './ReportsPage.css';
 export const ReportsPage: React.FC = () => {
   const [selectedSession, setSelectedSession] = useState<SessionReport | null>(null);
   const [reports, setReports] = useState<SessionReport[]>([]);
+
+  // Filter States
+  const [searchQuery, setSearchQuery] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [attendanceFilter, setAttendanceFilter] = useState<'all' | 'pass' | 'fail'>('all');
+
+  // Email Scheduler States
+  const [isSchedOpen, setIsSchedOpen] = useState(false);
+  const [schedFreq, setSchedFreq] = useState('weekly-friday');
+  const [schedTime, setSchedTime] = useState('17:00');
+  const [schedEmail, setSchedEmail] = useState('admin@edumeet.com');
+  const [schedSaved, setSchedSaved] = useState(false);
 
   useEffect(() => {
     const local = getSessionReports();
@@ -31,6 +44,19 @@ export const ReportsPage: React.FC = () => {
     }));
 
     setReports([...local, ...mockReportsMapped]);
+
+    // Load saved scheduler config
+    const savedConfig = localStorage.getItem('edumeet_report_schedule_config');
+    if (savedConfig) {
+      try {
+        const parsed = JSON.parse(savedConfig);
+        setSchedFreq(parsed.freq || 'weekly-friday');
+        setSchedTime(parsed.time || '17:00');
+        setSchedEmail(parsed.email || 'admin@edumeet.com');
+      } catch (e) {
+        console.error('Error loading schedule config:', e);
+      }
+    }
   }, []);
 
   const getQualityText = (quality: SessionReport['avgConnectionQuality']) => {
@@ -56,6 +82,7 @@ export const ReportsPage: React.FC = () => {
     return { label: 'Good', color: 'text-primary' };
   };
 
+  // 1. Export CSV (Original)
   const handleExportCSV = (session: SessionReport) => {
     const headers = ['Học viên', 'Vai trò', 'Thời lượng tham gia (phút)', 'Tỷ lệ (%)', 'Độ trễ Ping (ms)', 'Jitter (ms)', 'Tỷ lệ mất gói (%)', 'Chất lượng kết nối'];
     const rows = session.details.map(d => {
@@ -87,10 +114,114 @@ export const ReportsPage: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
+  // 2. Export Excel XML styled sheet (.xls)
+  const handleExportExcel = (session: SessionReport) => {
+    const title = `BÁO CÁO CHUYÊN CẦN LỚP HỌC - ${session.roomName.toUpperCase()}`;
+    const dateStr = `Ngày dạy: ${session.date}`;
+    
+    let html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">`;
+    html += `<head><meta charset="utf-8"/><style>`;
+    html += `table { border-collapse: collapse; font-family: Arial, sans-serif; width: 100%; }`;
+    html += `th { background-color: #4f46e5; color: white; border: 1px solid #cccccc; padding: 10px; font-weight: bold; text-align: center; }`;
+    html += `td { border: 1px solid #cccccc; padding: 8px; text-align: left; }`;
+    html += `.title-row { font-size: 16px; font-weight: bold; color: #1e1e2f; text-align: center; height: 35px; }`;
+    html += `.meta-row { font-size: 11px; color: #666666; font-style: italic; }`;
+    html += `.teacher-cell { background-color: #f5f3ff; font-weight: bold; }`;
+    html += `.pct-pass { color: #10b981; font-weight: bold; }`;
+    html += `.pct-fail { color: #ef4444; font-weight: bold; }`;
+    html += `</style></head><body>`;
+    html += `<table>`;
+    html += `<tr><td colspan="8" class="title-row">${title}</td></tr>`;
+    html += `<tr><td colspan="8" class="meta-row">${dateStr}</td></tr>`;
+    html += `<tr><td colspan="8" class="meta-row">Sĩ số lớp học: ${session.presentStudents}/${session.totalStudents} học sinh | Thời lượng giảng dạy trung bình: ${session.avgDurationMins} phút</td></tr>`;
+    html += `<tr><td colspan="8"></td></tr>`;
+    html += `<tr>`;
+    html += `<th>Học viên</th><th>Vai trò</th><th>Thời lượng tham gia</th><th>Tỷ lệ chuyên cần</th><th>Ping (ms)</th><th>Jitter (ms)</th><th>Mất gói (%)</th><th>Trạng thái mạng</th>`;
+    html += `</tr>`;
+    
+    session.details.forEach(d => {
+      const tel = getTelemetryStatus(d.telemetry.ping, d.telemetry.loss, d.telemetry.jitter);
+      const isTeacher = d.role === 'Giáo viên';
+      const rowStyle = isTeacher ? 'class="teacher-cell"' : '';
+      const pctClass = d.pct >= 90 ? 'pct-pass' : 'pct-fail';
+      
+      html += `<tr>`;
+      html += `<td ${rowStyle}>${d.name}</td>`;
+      html += `<td ${rowStyle}>${d.role}</td>`;
+      html += `<td ${rowStyle}>${d.presentTimeMins} phút</td>`;
+      html += `<td ${rowStyle} class="${pctClass}">${d.pct}%</td>`;
+      html += `<td ${rowStyle}>${d.telemetry.ping} ms</td>`;
+      html += `<td ${rowStyle}>${d.telemetry.jitter} ms</td>`;
+      html += `<td ${rowStyle}>${d.telemetry.loss}%</td>`;
+      html += `<td ${rowStyle}>${tel.label}</td>`;
+      html += `</tr>`;
+    });
+    
+    html += `</table></body></html>`;
+    
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Bao_cao_chuyen_can_${session.roomName.replace(/\s+/g, '_')}_${session.date.replace(/\//g, '-')}.xls`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  // 3. Print Report (triggers PDF generation via browser)
+  const handlePrintReport = () => {
+    window.print();
+  };
+
+  // Save scheduler configuration
+  const handleSaveScheduler = (e: React.FormEvent) => {
+    e.preventDefault();
+    const config = { freq: schedFreq, time: schedTime, email: schedEmail };
+    localStorage.setItem('edumeet_report_schedule_config', JSON.stringify(config));
+    setSchedSaved(true);
+    setTimeout(() => setSchedSaved(false), 3000);
+  };
+
+  // Apply Search & Filter options
+  const filteredReports = reports.filter(r => {
+    const matchesSearch = r.roomName.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // Parse date (DD/MM/YYYY)
+    let matchesDate = true;
+    if (startDate || endDate) {
+      const [day, month, year] = r.date.split('/');
+      const reportDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      
+      if (startDate) {
+        const start = new Date(startDate);
+        start.setHours(0,0,0,0);
+        if (reportDate < start) matchesDate = false;
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23,59,59,999);
+        if (reportDate > end) matchesDate = false;
+      }
+    }
+
+    // Attendance stats filter
+    let matchesAttendance = true;
+    const avgPct = r.details.length > 0 
+      ? r.details.reduce((sum, d) => sum + d.pct, 0) / r.details.length
+      : (r.presentStudents / r.totalStudents) * 100;
+      
+    if (attendanceFilter === 'pass' && avgPct < 90) matchesAttendance = false;
+    if (attendanceFilter === 'fail' && avgPct >= 90) matchesAttendance = false;
+
+    return matchesSearch && matchesDate && matchesAttendance;
+  });
+
   if (selectedSession) {
     return (
-      <div className="page-container session-report-page animate-fade-in">
-        <button onClick={() => setSelectedSession(null)} className="back-btn glass-panel">
+      <div className="page-container session-report-page animate-fade-in printable-report">
+        <button onClick={() => setSelectedSession(null)} className="back-btn glass-panel no-print">
           <ArrowLeft size={16} />
           <span>Quay lại</span>
         </button>
@@ -113,12 +244,22 @@ export const ReportsPage: React.FC = () => {
         </div>
 
         <section className="reports-section glass-panel">
-          <div className="reports-section-header">
+          <div className="reports-section-header no-print">
             <h3>Chi tiết Chuyên cần & Telemetry Mạng</h3>
-            <button className="export-btn-full" onClick={() => handleExportCSV(selectedSession)}>
-              <Download size={14} />
-              <span>Tải Báo Cáo CSV</span>
-            </button>
+            <div className="report-export-actions" style={{ display: 'flex', gap: '0.5rem' }}>
+              <button className="export-btn-full secondary" onClick={handlePrintReport}>
+                <Printer size={14} />
+                <span>In / Xuất PDF</span>
+              </button>
+              <button className="export-btn-full secondary" onClick={() => handleExportCSV(selectedSession)}>
+                <Download size={14} />
+                <span>Tải CSV</span>
+              </button>
+              <button className="export-btn-full" onClick={() => handleExportExcel(selectedSession)}>
+                <Download size={14} />
+                <span>Xuất Excel (.xls)</span>
+              </button>
+            </div>
           </div>
 
           <div className="table-responsive">
@@ -173,8 +314,115 @@ export const ReportsPage: React.FC = () => {
 
   return (
     <div className="page-container reports-page animate-fade-in">
+      
+      {/* Search and Filters Section */}
+      <section className="reports-filters-section glass-panel">
+        <div className="filter-row">
+          {/* Search bar */}
+          <div className="search-box-wrapper">
+            <Search size={16} className="search-icon-filter" />
+            <input
+              type="text"
+              placeholder="Tìm kiếm theo phòng/môn học..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="filter-search-input"
+            />
+          </div>
+
+          {/* Date range filter */}
+          <div className="date-picker-group">
+            <div className="date-input-container">
+              <Calendar size={14} className="date-icon" />
+              <input
+                type="date"
+                value={startDate}
+                onChange={e => setStartDate(e.target.value)}
+                title="Từ ngày"
+              />
+            </div>
+            <span className="date-separator">đến</span>
+            <div className="date-input-container">
+              <Calendar size={14} className="date-icon" />
+              <input
+                type="date"
+                value={endDate}
+                onChange={e => setEndDate(e.target.value)}
+                title="Đến ngày"
+              />
+            </div>
+          </div>
+
+          {/* Attendance select filter */}
+          <div className="select-filter-container">
+            <Filter size={14} className="select-icon" />
+            <select
+              value={attendanceFilter}
+              onChange={e => setAttendanceFilter(e.target.value as 'all' | 'pass' | 'fail')}
+            >
+              <option value="all">Tất cả chuyên cần</option>
+              <option value="pass">{"Chuyên cần Đạt (>= 90%)"}</option>
+              <option value="fail">{"Chuyên cần Yếu (< 90%)"}</option>
+            </select>
+          </div>
+
+          {/* Auto Scheduler button */}
+          <button 
+            className={`scheduler-toggle-btn ${isSchedOpen ? 'active' : ''}`}
+            onClick={() => setIsSchedOpen(!isSchedOpen)}
+            title="Lập lịch gửi báo cáo qua Email"
+          >
+            <Mail size={16} />
+            <span>Tự động gửi báo cáo</span>
+          </button>
+        </div>
+
+        {/* Email Scheduler Configuration panel */}
+        {isSchedOpen && (
+          <div className="scheduler-config-panel animate-scale-up">
+            <h4>⚙️ Cấu Hình Tự Động Gửi Báo Cáo Chuyên Cần Định Kỳ</h4>
+            <form onSubmit={handleSaveScheduler} className="scheduler-form">
+              <div className="form-row-sched">
+                <div className="form-group-sched">
+                  <label>Tần suất gửi</label>
+                  <select value={schedFreq} onChange={e => setSchedFreq(e.target.value)}>
+                    <option value="daily">Hàng ngày (18:00)</option>
+                    <option value="weekly-monday">Thứ Hai hàng tuần (08:00)</option>
+                    <option value="weekly-friday">Thứ Sáu hàng tuần (17:00)</option>
+                    <option value="monthly">Cuối tháng (20:00)</option>
+                  </select>
+                </div>
+                <div className="form-group-sched">
+                  <label>Giờ kích hoạt</label>
+                  <input type="time" value={schedTime} onChange={e => setSchedTime(e.target.value)} />
+                </div>
+                <div className="form-group-sched email-field">
+                  <label>Email tiếp nhận</label>
+                  <input 
+                    type="email" 
+                    placeholder="admin@edumeet.com" 
+                    value={schedEmail} 
+                    onChange={e => setSchedEmail(e.target.value)} 
+                    required 
+                  />
+                </div>
+                <div className="form-group-sched submit-btn-field">
+                  <button type="submit" className="save-sched-btn">Lưu cấu hình</button>
+                </div>
+              </div>
+              {schedSaved && (
+                <div className="sched-success-msg text-success">
+                  ✓ Lưu cấu hình thành công! Hệ thống giả lập sẽ tự động kích hoạt gửi báo cáo định kỳ.
+                </div>
+              )}
+            </form>
+          </div>
+        )}
+      </section>
+
+      {/* Reports Grid List */}
       <div className="reports-list">
-        {reports.map(session => (
+        {filteredReports.map(session => (
           <div
             key={session.id}
             className="session-report-card glass-panel"
@@ -198,10 +446,13 @@ export const ReportsPage: React.FC = () => {
             </div>
           </div>
         ))}
-        {reports.length === 0 && (
-          <div className="no-materials">Không có báo cáo buổi học nào được ghi nhận.</div>
+        {filteredReports.length === 0 && (
+          <div className="no-materials" style={{ textAlign: 'center', padding: '2rem' }}>
+            Không tìm thấy báo cáo buổi học nào phù hợp với bộ lọc.
+          </div>
         )}
       </div>
     </div>
   );
 };
+

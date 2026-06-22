@@ -3,8 +3,9 @@ import { useClass } from '../../context/ClassContext';
 import { VideoGrid, JitsiTrack } from '../VideoGrid/VideoGrid';
 import { ControlBar } from '../ControlBar/ControlBar';
 import { SidePanel } from '../SidePanel/SidePanel';
-import { Clock, BookOpen, Presentation, MonitorUp } from 'lucide-react';
+import { Clock, BookOpen, Presentation, MonitorUp, AlertTriangle, WifiOff, X, Server, Activity } from 'lucide-react';
 import './ClassroomScreen.css';
+import './DiagnosticAlerts.css';
 
 // Hiển thị luồng màn hình thật (getDisplayMedia)
 const ScreenShareVideo: React.FC<{ stream: MediaStream }> = ({ stream }) => {
@@ -16,8 +17,20 @@ const ScreenShareVideo: React.FC<{ stream: MediaStream }> = ({ stream }) => {
 };
 
 export const ClassroomScreen: React.FC = () => {
-  const { roomName, isScreenSharing, screenStream, screenTrack, screenSharingUserId, participants } = useClass();
+  const { 
+    roomName, 
+    isScreenSharing, 
+    screenStream, 
+    screenTrack, 
+    screenSharingUserId, 
+    participants,
+    diagnosticAlerts,
+    dismissAlert,
+    simulationMode,
+    triggerSimulation
+  } = useClass();
   const [duration, setDuration] = useState(0);
+  const [showSimulation, setShowSimulation] = useState(false);
 
   const isLocalScreenSharing = screenSharingUserId === 'local-user' || screenStream !== null;
   const screenSharingParticipant = participants.find(p => p.id === screenSharingUserId);
@@ -51,6 +64,33 @@ export const ClassroomScreen: React.FC = () => {
       <div className="glow-orb glow-orb-primary"></div>
       <div className="glow-orb glow-orb-purple"></div>
       <div className="glow-orb glow-orb-cyan"></div>
+
+      {/* Diagnostic Alerts Overlay */}
+      {diagnosticAlerts.length > 0 && (
+        <div className="diagnostic-alerts-container">
+          {diagnosticAlerts.map(alert => (
+            <div key={alert.id} className={`diagnostic-alert-card alert-level-${alert.level}`}>
+              <div className="alert-icon-wrapper">
+                {alert.type === 'local' ? (
+                  <WifiOff size={18} />
+                ) : alert.type === 'infrastructure' ? (
+                  <Server size={18} />
+                ) : (
+                  <AlertTriangle size={18} />
+                )}
+              </div>
+              <div className="alert-content-details">
+                <h4>{alert.title}</h4>
+                <p className="alert-msg-text">{alert.message}</p>
+                {alert.solution && <p className="alert-sol-text">{alert.solution}</p>}
+              </div>
+              <button onClick={() => dismissAlert(alert.id)} className="alert-close-action-btn" title="Đóng cảnh báo">
+                <X size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Classroom Header Bar */}
       <header className="classroom-header-bar glass-panel">
@@ -131,6 +171,63 @@ export const ClassroomScreen: React.FC = () => {
 
       {/* Control Tools */}
       <ControlBar />
+
+      {/* Simulation Toggle & Console Panel */}
+      <button 
+        onClick={() => setShowSimulation(prev => !prev)}
+        className={`simulation-panel-toggle-btn ${showSimulation ? 'panel-active' : ''}`}
+        title="Mô phỏng sự cố mạng để chẩn đoán"
+      >
+        <Activity size={14} />
+        <span>Giả lập mạng {simulationMode !== 'none' && `(Đang chạy)`}</span>
+      </button>
+
+      {showSimulation && (
+        <div className="simulation-control-card glass-panel">
+          <div className="simulation-card-header">
+            <h3>
+              <Activity size={14} />
+              <span>Bảng Giả Lập Mạng</span>
+            </h3>
+            <button onClick={() => setShowSimulation(false)} className="close-debug-card-btn">
+              <X size={14} />
+            </button>
+          </div>
+          <p className="simulation-description">
+            Lựa chọn một chế độ để chẩn đoán sự cố mạng hoạt động trên lớp học trực tuyến.
+          </p>
+          <div className="simulation-buttons-grid">
+            <button 
+              type="button"
+              onClick={() => triggerSimulation('none')} 
+              className={`sim-mode-btn ${simulationMode === 'none' ? 'active' : ''}`}
+            >
+              <span>Bình thường (Mặc định)</span>
+            </button>
+            <button 
+              type="button"
+              onClick={() => triggerSimulation('local')} 
+              className={`sim-mode-btn ${simulationMode === 'local' ? 'active' : ''}`}
+            >
+              <span>Sự cố mạng của bạn (Local)</span>
+            </button>
+            <button 
+              type="button"
+              onClick={() => triggerSimulation('teacher')} 
+              className={`sim-mode-btn ${simulationMode === 'teacher' ? 'active' : ''}`}
+            >
+              <span>Sự cố mạng Giáo viên (Host)</span>
+            </button>
+            <button 
+              type="button"
+              onClick={() => triggerSimulation('infrastructure')} 
+              className={`sim-mode-btn ${simulationMode === 'infrastructure' ? 'active' : ''}`}
+            >
+              <span>Sự cố hệ thống (Server Infra)</span>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

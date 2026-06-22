@@ -60,6 +60,16 @@ export interface ChatMessage {
   timestamp: Date;
 }
 
+export interface DiagnosticAlert {
+  id: string;
+  type: 'local' | 'remote' | 'infrastructure';
+  level: 'warning' | 'critical';
+  title: string;
+  message: string;
+  solution: string;
+  timestamp: Date;
+}
+
 interface ClassContextType {
   screen: 'lms' | 'classroom';
   activePage: LmsPage;
@@ -101,6 +111,15 @@ interface ClassContextType {
   toggleTheme: () => void;
   screenTrack: any | null;
   screenSharingUserId: string;
+  diagnosticAlerts: DiagnosticAlert[];
+  dismissAlert: (id: string) => void;
+  simulationMode: 'none' | 'local' | 'teacher' | 'infrastructure';
+  triggerSimulation: (mode: 'none' | 'local' | 'teacher' | 'infrastructure') => void;
+  isBreakoutActive: boolean;
+  breakoutTimeLeft: number;
+  breakoutRoomsCount: number;
+  startBreakout: (rooms: number, mins: number) => void;
+  stopBreakout: () => void;
 }
 
 const ClassContext = createContext<ClassContextType | undefined>(undefined);
@@ -181,6 +200,43 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Bật mô phỏng telemetry (chế độ mock / khi fallback) để các chỉ số "nhảy số" như thật
   const [simulateTelemetry, setSimulateTelemetry] = useState(false);
 
+  // Diagnostics & Simulation States
+  const [diagnosticAlerts, setDiagnosticAlerts] = useState<DiagnosticAlert[]>([]);
+  const [simulationMode, setSimulationMode] = useState<'none' | 'local' | 'teacher' | 'infrastructure'>('none');
+  const [dismissedAlertIds, setDismissedAlertIds] = useState<string[]>([]);
+
+  // Breakout Rooms states
+  const [isBreakoutActive, setIsBreakoutActive] = useState(false);
+  const [breakoutTimeLeft, setBreakoutTimeLeft] = useState(0);
+  const [breakoutRoomsCount, setBreakoutRoomsCount] = useState(2);
+
+  useEffect(() => {
+    let interval: any;
+    if (isBreakoutActive && breakoutTimeLeft > 0) {
+      interval = setInterval(() => {
+        setBreakoutTimeLeft(prev => {
+          if (prev <= 1) {
+            setIsBreakoutActive(false);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isBreakoutActive, breakoutTimeLeft]);
+
+  const startBreakout = (rooms: number, mins: number) => {
+    setBreakoutRoomsCount(rooms);
+    setBreakoutTimeLeft(mins * 60);
+    setIsBreakoutActive(true);
+  };
+
+  const stopBreakout = () => {
+    setIsBreakoutActive(false);
+    setBreakoutTimeLeft(0);
+  };
+
   // Derived state for hand raise queue (FIFO)
   const raiseHandQueue = participants
     .filter(p => p.isHandRaised && p.handRaiseTime)
@@ -227,6 +283,167 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }, 2500);
     return () => clearInterval(id);
   }, [simulateTelemetry, screen]);
+
+  // Rule Engine for Network Diagnostics
+  useEffect(() => {
+    if (screen !== 'classroom') {
+      setDiagnosticAlerts([]);
+      return;
+    }
+
+    const runRuleEngine = () => {
+      const alerts: DiagnosticAlert[] = [];
+      const now = new Date();
+
+      // Gather current stats of participants (taking simulation mode into account)
+      const participantsWithStats = participants.map(p => {
+        let ping = p.latency ?? 30;
+        let loss = p.packetLoss ?? 0;
+        let jit = p.jitter ?? 2;
+        let quality = p.connectionQuality;
+
+        // Apply simulation values
+        if (simulationMode === 'local' && p.isLocal) {
+          ping = 320;
+          loss = 8;
+          jit = 55;
+          quality = 'critical';
+        } else if (simulationMode === 'teacher' && p.role === 'teacher') {
+          ping = 450;
+          loss = 12;
+          jit = 75;
+          quality = 'critical';
+        } else if (simulationMode === 'infrastructure') {
+          if (p.isLocal) {
+            ping = 280;
+            loss = 6;
+            jit = 40;
+            quality = 'poor';
+          } else {
+            ping = 350;
+            loss = 10;
+            jit = 65;
+            quality = 'critical';
+          }
+        }
+
+        return { ...p, latency: ping, packetLoss: loss, jitter: jit, connectionQuality: quality };
+      });
+
+      // Find local user and teacher
+      const localUser = participantsWithStats.find(p => p.isLocal);
+      const teacher = participantsWithStats.find(p => p.role === 'teacher');
+
+      // Rule 02: Participant Issue (Local user)
+      if (localUser && simulationMode === 'local') {
+        alerts.push({
+          id: 'alert-local-issue',
+          type: 'local',
+          level: 'critical',
+          title: 'Kết nối mạng của bạn gặp sự cố',
+          message: `Hệ thống phát hiện suy hao dữ liệu cao (Packet Loss: ${localUser.packetLoss}%, RTT: ${localUser.latency}ms, Jitter: ${localUser.jitter}ms).`,
+          solution: 'Khuyến nghị: Thử di chuyển lại gần bộ phát Wi-Fi, cắm dây mạng LAN trực tiếp, hoặc tạm thời tắt camera của bạn để tiết kiệm băng thông.',
+          timestamp: now
+        });
+      }
+
+      // Rule 01: Host/Teacher Issue
+      if (teacher && (simulationMode === 'teacher' || (teacher.packetLoss !== undefined && (teacher.packetLoss > 5 || (teacher.latency && teacher.latency > 300))))) {
+        alerts.push({
+          id: 'alert-teacher-issue',
+          type: 'remote',
+          level: 'critical',
+          title: `Giáo viên ${teacher.name} gặp sự cố kết nối`,
+          message: `Đường truyền của giáo viên phụ trách đang bị chập chờn (Packet Loss: ${teacher.packetLoss}%, RTT: ${teacher.latency}ms). Lớp học có thể bị gián đoạn âm thanh hoặc hình ảnh từ giáo viên.`,
+          solution: 'Khuyến nghị: Đang chờ giáo viên chuyển hướng kết nối hoặc giảm độ phân giải truyền tải. Học sinh vui lòng kiên nhẫn.',
+          timestamp: now
+        });
+      }
+
+      // Rule 03: Infrastructure Issue
+      if (simulationMode === 'infrastructure') {
+        alerts.push({
+          id: 'alert-infra-issue',
+          type: 'infrastructure',
+          level: 'critical',
+          title: 'Hệ thống máy chủ/Hạ tầng kết nối gặp sự cố diện rộng',
+          message: 'Tỷ lệ người dùng gặp cảnh báo kết nối kém vượt quá 30% tổng số lớp học đang hoạt động. Sự cố xảy ra đồng loạt ở nhiều thành viên.',
+          solution: 'Khuyến nghị: Ban quản trị hệ thống đang kiểm tra Media Server (Jitsi Bridge) và hạ tầng mạng trung tâm. Lớp học có thể tạm thời chuyển sang chế độ âm thanh.',
+          timestamp: now
+        });
+      }
+
+      // Also check standard conditions (non-simulated) if stats are bad
+      if (simulationMode === 'none') {
+        if (localUser && localUser.latency !== undefined && localUser.packetLoss !== undefined && localUser.jitter !== undefined) {
+          const stats = localUser;
+          if (stats.packetLoss > 5 || stats.latency > 300 || stats.jitter > 50) {
+            alerts.push({
+              id: 'alert-local-auto',
+              type: 'local',
+              level: 'critical',
+              title: 'Cảnh báo: Kết nối mạng của bạn rất yếu',
+              message: `Độ trễ (${stats.latency}ms) hoặc mất gói (${stats.packetLoss}%) đang vượt ngưỡng khuyến nghị.`,
+              solution: 'Gợi ý: Tắt camera cá nhân hoặc ngắt các kết nối VPN đang hoạt động.',
+              timestamp: now
+            });
+          } else if (stats.packetLoss > 3 || stats.latency > 200 || stats.jitter > 30) {
+            alerts.push({
+              id: 'alert-local-auto-warn',
+              type: 'local',
+              level: 'warning',
+              title: 'Cảnh báo: Đường truyền không ổn định',
+              message: `Độ trễ (${stats.latency}ms) và dao động (${stats.jitter}ms) tăng nhẹ.`,
+              solution: 'Gợi ý: Tránh tải file hoặc streaming trong lúc học.',
+              timestamp: now
+            });
+          }
+        }
+
+        const badStudents = participantsWithStats.filter(p => !p.isLocal && p.role === 'student' && (p.connectionQuality === 'poor' || p.connectionQuality === 'critical'));
+        if (badStudents.length > 0 && badStudents.length < participantsWithStats.length * 0.3) {
+          badStudents.slice(0, 1).forEach(s => {
+            alerts.push({
+              id: `alert-student-${s.id}`,
+              type: 'remote',
+              level: 'warning',
+              title: `Học viên ${s.name} kết nối yếu`,
+              message: `Học sinh này đang gặp khó khăn khi tải luồng video/âm thanh của lớp học (Mạng: ${s.connectionQuality === 'critical' ? 'Rất yếu' : 'Yếu'}).`,
+              solution: 'Giáo viên có thể đề nghị học sinh này tắt camera của họ hoặc hướng dẫn họ đổi đường truyền mạng.',
+              timestamp: now
+            });
+          });
+        } else if (badStudents.length >= participantsWithStats.length * 0.3 && participantsWithStats.length > 2) {
+          alerts.push({
+            id: 'alert-infra-auto',
+            type: 'infrastructure',
+            level: 'critical',
+            title: 'Nghi vấn: Sự cố hạ tầng phòng học',
+            message: `Hơn 30% học viên trong phòng học đồng thời có kết nối mạng yếu hoặc mất kết nối.`,
+            solution: 'Kiểm tra xem máy chủ Jitsi Meet có đang quá tải hay không. Quản trị viên đã được thông báo.',
+            timestamp: now
+          });
+        }
+      }
+
+      setDiagnosticAlerts(alerts.filter(a => !dismissedAlertIds.includes(a.id)));
+    };
+
+    const interval = setInterval(runRuleEngine, 3000);
+    runRuleEngine();
+
+    return () => clearInterval(interval);
+  }, [participants, simulationMode, screen, dismissedAlertIds]);
+
+  const dismissAlert = (id: string) => {
+    setDismissedAlertIds(prev => [...prev, id]);
+    setDiagnosticAlerts(prev => prev.filter(a => a.id !== id));
+  };
+
+  const triggerSimulation = (mode: 'none' | 'local' | 'teacher' | 'infrastructure') => {
+    setSimulationMode(mode);
+    setDismissedAlertIds([]);
+  };
 
   // Join Room connecting with Jitsi Meet
   const joinRoom = (room: string, name: string, userRole: UserRole) => {
@@ -558,6 +775,10 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setPanelOpen(false);
     setDominantSpeakerId('');
     setSimulateTelemetry(false);
+    
+    // Reset breakout rooms
+    setIsBreakoutActive(false);
+    setBreakoutTimeLeft(0);
   };
 
   const toggleAudio = () => {
@@ -806,6 +1027,15 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         toggleTheme,
         screenTrack,
         screenSharingUserId,
+        diagnosticAlerts,
+        dismissAlert,
+        simulationMode,
+        triggerSimulation,
+        isBreakoutActive,
+        breakoutTimeLeft,
+        breakoutRoomsCount,
+        startBreakout,
+        stopBreakout,
       }}
     >
       {children}

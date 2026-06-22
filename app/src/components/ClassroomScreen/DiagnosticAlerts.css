@@ -1,0 +1,317 @@
+/* REAL-TIME DIAGNOSTIC ALERTS & SIMULATION PANEL STYLES */
+
+/* 1. Diagnostic Alerts Floating Area */
+.diagnostic-alerts-container {
+  position: absolute;
+  top: 90px; /* Right below the header bar */
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 700px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  pointer-events: none; /* Let clicks pass through empty space */
+}
+
+/* Individual Alert Card */
+.diagnostic-alert-card {
+  pointer-events: auto; /* Re-enable pointer events for card */
+  display: flex;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: slide-down-fade 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.diagnostic-alert-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+}
+
+/* Alert Levels */
+.diagnostic-alert-card.alert-level-critical {
+  background: rgba(239, 68, 68, 0.12); /* Red glass */
+  border-color: rgba(239, 68, 68, 0.3);
+}
+.diagnostic-alert-card.alert-level-critical::before {
+  background: #ef4444;
+  box-shadow: 0 0 10px #ef4444;
+}
+
+.diagnostic-alert-card.alert-level-warning {
+  background: rgba(245, 158, 11, 0.12); /* Yellow glass */
+  border-color: rgba(245, 158, 11, 0.3);
+}
+.diagnostic-alert-card.alert-level-warning::before {
+  background: #f59e0b;
+  box-shadow: 0 0 10px #f59e0b;
+}
+
+/* Alert Icon Wrapper */
+.alert-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.alert-level-critical .alert-icon-wrapper {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  animation: pulse-red-glow 2s infinite;
+}
+.alert-level-warning .alert-icon-wrapper {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+}
+
+/* Alert Content */
+.alert-content-details {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding-right: 1.5rem;
+}
+
+.alert-content-details h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.alert-level-critical .alert-content-details h4 {
+  color: #fecaca;
+}
+.alert-level-warning .alert-content-details h4 {
+  color: #fef3c7;
+}
+
+.alert-msg-text {
+  margin: 0;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.4;
+}
+
+.alert-sol-text {
+  margin: 0.25rem 0 0 0;
+  font-size: 0.8rem;
+  color: #a7f3d0; /* Soft green */
+  font-weight: 500;
+  line-height: 1.4;
+  background: rgba(16, 185, 129, 0.1);
+  padding: 4px 8px;
+  border-radius: 6px;
+  border-left: 2px solid #10b981;
+}
+
+/* Alert Close button */
+.alert-close-action-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+.alert-close-action-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+/* 2. Simulation Panel Toggle Button */
+.simulation-panel-toggle-btn {
+  position: absolute;
+  bottom: 95px;
+  left: 20px;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.simulation-panel-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px);
+}
+.simulation-panel-toggle-btn.panel-active {
+  background: #3b82f6;
+  border-color: #60a5fa;
+  color: #ffffff;
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
+}
+
+/* 3. Simulation Control Panel Card */
+.simulation-control-card {
+  position: absolute;
+  bottom: 145px;
+  left: 20px;
+  width: 280px;
+  z-index: 998;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.85); /* Darker backdrop */
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 1.25rem;
+  color: #ffffff;
+  animation: slide-up-fade 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.simulation-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 0.5rem;
+}
+.simulation-card-header h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.close-debug-card-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+}
+.close-debug-card-btn:hover {
+  color: #ffffff;
+}
+
+.simulation-description {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0 0 1rem 0;
+  line-height: 1.4;
+}
+
+.simulation-buttons-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sim-mode-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.85rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+.sim-mode-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  transform: translateX(4px);
+}
+.sim-mode-btn.active {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: #3b82f6;
+  color: #60a5fa;
+  box-shadow: inset 0 0 10px rgba(59, 130, 246, 0.1);
+}
+.sim-mode-btn.active::after {
+  content: '●';
+  font-size: 8px;
+  color: #3b82f6;
+  animation: pulse-glow-dot 1.5s infinite;
+}
+
+/* Animations */
+@keyframes slide-down-fade {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-up-fade {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-red-glow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+}
+
+@keyframes pulse-glow-dot {
+  0% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.4;
+  }
+}

@@ -159,3 +159,337 @@
   font-weight: 700;
   font-size: 0.8rem;
 }
+
+/* Secondary Export / Print Button */
+.export-btn-full.secondary {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  box-shadow: none;
+}
+
+.export-btn-full.secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  box-shadow: none;
+}
+
+/* Search & Filters layout */
+.reports-filters-section {
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.search-box-wrapper {
+  flex: 1;
+  min-width: 260px;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon-filter {
+  position: absolute;
+  left: 0.85rem;
+  color: var(--text-muted);
+}
+
+.filter-search-input {
+  width: 100%;
+  padding: 0.6rem 1rem 0.6rem 2.35rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  outline: none;
+  transition: all var(--transition-fast);
+}
+
+.filter-search-input:focus {
+  border-color: var(--color-cyan-light);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.date-picker-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.date-input-container {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.date-input-container input {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  outline: none;
+}
+
+.date-separator {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.select-filter-container {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.select-filter-container select {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  outline: none;
+  cursor: pointer;
+}
+
+.scheduler-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  background: rgba(99, 102, 241, 0.1);
+  color: #c7d2fe;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.scheduler-toggle-btn:hover,
+.scheduler-toggle-btn.active {
+  background: rgba(99, 102, 241, 0.25);
+  border-color: rgba(99, 102, 241, 0.5);
+  color: white;
+}
+
+/* Scheduler panel styles */
+.scheduler-config-panel {
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 1rem;
+  margin-top: 0.5rem;
+}
+
+.scheduler-config-panel h4 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.75rem;
+}
+
+.scheduler-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-row-sched {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  align-items: flex-end;
+}
+
+.form-group-sched {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.form-group-sched label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.form-group-sched select,
+.form-group-sched input {
+  padding: 0.45rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  outline: none;
+}
+
+.form-group-sched.email-field {
+  flex: 1;
+  min-width: 200px;
+}
+
+.save-sched-btn {
+  padding: 0.5rem 1.1rem;
+  border-radius: 6px;
+  border: none;
+  background: var(--color-cyan);
+  color: #0f172a;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.save-sched-btn:hover {
+  background: var(--color-cyan-light);
+  box-shadow: 0 0 12px rgba(6, 182, 212, 0.3);
+}
+
+.sched-success-msg {
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-top: 0.25rem;
+}
+
+/* ==========================================================================
+   PRINT STYLES (@media print)
+   ========================================================================== */
+@media print {
+  /* Hide unnecessary UI elements */
+  .no-print,
+  .back-btn,
+  .lms-sidebar,
+  .sidebar,
+  .top-navbar,
+  .navbar,
+  .reports-filters-section,
+  .reports-section-header,
+  .report-export-actions,
+  .footer {
+    display: none !important;
+  }
+
+  /* Make report container fill the width */
+  body, html {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-family: Arial, sans-serif !important;
+  }
+
+  .page-container,
+  .session-report-page,
+  .reports-section,
+  .glass-panel {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+
+  /* Print specific report header */
+  .report-session-header {
+    border-left: 5px solid #4f46e5 !important;
+    padding: 15px 0 !important;
+    margin-bottom: 25px !important;
+    color: #000 !important;
+    display: block !important;
+  }
+
+  .report-session-header h2 {
+    color: #000 !important;
+    font-size: 22px !important;
+  }
+
+  .date-tag {
+    color: #666 !important;
+    font-size: 12px !important;
+  }
+
+  .session-summary-pills {
+    margin-top: 10px !important;
+    display: flex !important;
+    gap: 15px !important;
+  }
+
+  .summary-pill {
+    background: none !important;
+    border: none !important;
+    padding: 0 !important;
+    color: #333 !important;
+    font-size: 13px !important;
+  }
+
+  /* Print table formatting */
+  .reports-table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+    color: #000 !important;
+    margin-top: 15px !important;
+  }
+
+  .reports-table th {
+    background-color: #f3f4f6 !important;
+    color: #000000 !important;
+    border: 1px solid #d1d5db !important;
+    padding: 8px !important;
+    font-size: 12px !important;
+  }
+
+  .reports-table td {
+    border: 1px solid #d1d5db !important;
+    padding: 8px !important;
+    color: #000000 !important;
+    font-size: 11px !important;
+  }
+
+  .role-cell {
+    background: none !important;
+    border: none !important;
+    padding: 0 !important;
+    color: #333 !important;
+  }
+
+  .pct-badge {
+    background: none !important;
+    color: #000 !important;
+    font-weight: bold !important;
+    padding: 0 !important;
+  }
+
+  .quality-badge-table {
+    color: #000 !important;
+  }
+
+  /* Force page breaks cleanly */
+  tr {
+    page-break-inside: avoid !important;
+  }
+}
+

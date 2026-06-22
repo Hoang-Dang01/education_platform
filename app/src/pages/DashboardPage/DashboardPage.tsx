@@ -1,11 +1,14 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useClass } from '../../context/ClassContext';
 import {
   Calendar, Clock, ArrowRight, TrendingUp, UserCheck, Activity,
   Users, Radio, Wifi, Lock, BookOpen, GraduationCap, Presentation, Eye,
+  Plus, Edit, Trash2, X,
 } from 'lucide-react';
-import { dashboardByRole, mockUpcomingClasses, mockLiveClasses } from '../../lib/mockData';
+import { dashboardByRole, mockLiveClasses } from '../../lib/mockData';
 import type { KpiIconName } from '../../lib/mockData';
+import { getScheduledClasses, saveScheduledClass, deleteScheduledClass } from '../../lib/localDb';
+import type { ScheduledClass } from '../../lib/localDb';
 import './DashboardPage.css';
 
 // Ánh xạ tên icon (trong mock data) sang component icon
@@ -23,8 +26,75 @@ const KPI_ICONS: Record<KpiIconName, React.ReactNode> = {
 };
 
 export const DashboardPage: React.FC = () => {
-  const { role, setActivePage, joinRoom, userName } = useClass();
+  const { role, joinRoom, userName } = useClass();
+  const [classes, setClasses] = useState<ScheduledClass[]>([]);
+  
+  // States for Modal
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editClass, setEditClass] = useState<ScheduledClass | null>(null);
+  const [subject, setSubject] = useState('');
+  const [time, setTime] = useState('');
+  const [teacher, setTeacher] = useState('');
+  const [room, setRoom] = useState('');
+  const [status, setStatus] = useState<'live' | 'scheduled'>('scheduled');
+
   const data = dashboardByRole[role];
+
+  useEffect(() => {
+    setClasses(getScheduledClasses());
+  }, []);
+
+  const handleOpenModal = (cls: ScheduledClass | null = null) => {
+    if (cls) {
+      setEditClass(cls);
+      setSubject(cls.subject);
+      setTime(cls.time);
+      setTeacher(cls.teacher);
+      setRoom(cls.room);
+      setStatus(cls.status);
+    } else {
+      setEditClass(null);
+      setSubject('');
+      setTime('08:00 - 09:30');
+      setTeacher(role === 'teacher' ? (userName || 'Thầy Nguyễn Hải Nam') : 'Cô Lê Thu Thảo');
+      setRoom('phong-' + Math.floor(Math.random() * 900 + 100));
+      setStatus('scheduled');
+    }
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditClass(null);
+  };
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!subject.trim() || !time.trim() || !teacher.trim() || !room.trim()) {
+      alert('Vui lòng điền đầy đủ thông tin lịch học');
+      return;
+    }
+    const newCls: ScheduledClass = {
+      id: editClass?.id || 'class-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+      subject,
+      time,
+      teacher,
+      room,
+      status
+    };
+    saveScheduledClass(newCls);
+    setClasses(getScheduledClasses());
+    handleCloseModal();
+  };
+
+  const handleDelete = (id: string) => {
+    if (window.confirm('Bạn có chắc chắn muốn xóa lịch giảng dạy này không?')) {
+      deleteScheduledClass(id);
+      setClasses(getScheduledClasses());
+    }
+  };
+
+  const isEditable = role === 'teacher' || role === 'manager' || role === 'admin';
 
   return (
     <div className="page-container dashboard-page animate-fade-in">
@@ -61,13 +131,19 @@ export const DashboardPage: React.FC = () => {
 
         {/* Left Side: Lịch học/dạy (schedule) hoặc Lớp đang diễn ra (live) */}
         <section className="dashboard-section glass-panel">
-          <div className="section-header">
+          <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3>{data.listTitle}</h3>
+            {data.listType === 'schedule' && isEditable && (
+              <button className="add-class-btn" onClick={() => handleOpenModal(null)}>
+                <Plus size={14} />
+                <span>Thêm lịch học</span>
+              </button>
+            )}
           </div>
 
           {data.listType === 'schedule' ? (
             <div className="class-cards-list">
-              {mockUpcomingClasses.map(cls => (
+              {classes.map(cls => (
                 <div key={cls.id} className="class-item-card glass-panel">
                   <div className="class-item-details">
                     <span className="class-item-time">
@@ -75,23 +151,39 @@ export const DashboardPage: React.FC = () => {
                       <span>{cls.time}</span>
                     </span>
                     <h4>{cls.subject}</h4>
-                    <p className="teacher-name">{cls.teacher}</p>
+                    <p className="teacher-name">{cls.teacher} · phòng {cls.room}</p>
                   </div>
-                  <div className="class-item-action">
+                  <div className="class-item-action-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    {isEditable && (
+                      <div className="schedule-admin-controls" style={{ display: 'flex', gap: '0.25rem' }}>
+                        <button className="action-icon-btn edit" onClick={() => handleOpenModal(cls)} title="Sửa lịch học">
+                          <Edit size={14} />
+                        </button>
+                        <button className="action-icon-btn delete" onClick={() => handleDelete(cls.id)} title="Xóa lịch học">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    )}
+                    
                     {cls.status === 'live' ? (
                       <button
-                        onClick={() => setActivePage('lobby')}
+                        onClick={() => joinRoom(cls.room, userName || 'Học viên', role)}
                         className="live-join-btn animate-pulse-light"
                       >
-                        <span>Vào lớp ngay</span>
+                        <span>Vào lớp</span>
                         <ArrowRight size={14} />
                       </button>
                     ) : (
-                      <span className="wait-badge">Chờ đến giờ</span>
+                      <span className="wait-badge">Chờ giờ</span>
                     )}
                   </div>
                 </div>
               ))}
+              {classes.length === 0 && (
+                <div className="no-materials" style={{ textAlign: 'center', padding: '2rem' }}>
+                  Chưa xếp lịch giảng dạy nào.
+                </div>
+              )}
             </div>
           ) : (
             <div className="class-cards-list">
@@ -99,7 +191,7 @@ export const DashboardPage: React.FC = () => {
                 <div key={c.id} className="class-item-card glass-panel">
                   <div className="class-item-details">
                     <span className="class-item-time">
-                      <Radio size={12} className="text-danger" />
+                      <Radio size={12} className="text-danger animate-pulse" />
                       <span>Trực tiếp · {c.participantCount}/{c.capacity} người</span>
                     </span>
                     <h4>{c.subject}</h4>
@@ -140,6 +232,87 @@ export const DashboardPage: React.FC = () => {
         </section>
 
       </div>
+
+      {/* Glassmorphism Schedule Modal Form */}
+      {isModalOpen && (
+        <div className="custom-modal-overlay">
+          <div className="custom-modal-content glass-panel animate-scale-up">
+            <div className="modal-header">
+              <h3>{editClass ? 'Cập Nhật Lịch Giảng Dạy' : 'Thêm Lịch Giảng Dạy Mới'}</h3>
+              <button className="close-modal-btn" onClick={handleCloseModal}>
+                <X size={18} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleSave} className="modal-form">
+              <div className="form-group">
+                <label>Tên Môn Học / Lớp Học</label>
+                <input
+                  type="text"
+                  placeholder="Ví dụ: Toán Học Giải Tích 12"
+                  value={subject}
+                  onChange={e => setSubject(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Thời Gian Học</label>
+                <input
+                  type="text"
+                  placeholder="Ví dụ: 10:00 - 11:30"
+                  value={time}
+                  onChange={e => setTime(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Giáo Viên Phụ Trách</label>
+                <input
+                  type="text"
+                  placeholder="Tên giáo viên"
+                  value={teacher}
+                  onChange={e => setTeacher(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Mã Phòng Học (Jitsi Room Name)</label>
+                <input
+                  type="text"
+                  placeholder="Ví dụ: toan-tin-k12"
+                  value={room}
+                  onChange={e => setRoom(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Trạng Thái</label>
+                <select
+                  value={status}
+                  onChange={e => setStatus(e.target.value as 'live' | 'scheduled')}
+                >
+                  <option value="scheduled">Đang lên lịch (Chờ giờ)</option>
+                  <option value="live">Đang diễn ra (Vào lớp ngay)</option>
+                </select>
+              </div>
+
+              <div className="modal-footer-actions">
+                <button type="button" className="cancel-btn-modal" onClick={handleCloseModal}>
+                  Hủy bỏ
+                </button>
+                <button type="submit" className="save-btn-modal">
+                  {editClass ? 'Cập nhật' : 'Tạo lịch'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+

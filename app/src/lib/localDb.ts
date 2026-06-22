@@ -145,3 +145,76 @@ export function saveSessionReport(report: SessionReport): void {
     console.error('Error saving session report to localStorage:', e);
   }
 }
+
+// --- LocalStorage Helpers cho Lịch học (Scheduled Classes) ---
+export interface ScheduledClass {
+  id: string;
+  subject: string;
+  time: string; // ví dụ: "10:00 - 11:30"
+  teacher: string;
+  room: string;
+  status: 'live' | 'scheduled';
+}
+
+const STORAGE_KEY_SCHEDULE = 'edumeet_scheduled_classes';
+
+// Mock ban đầu nếu chưa có lịch học nào lưu dưới local
+const MOCK_INITIAL_CLASSES: ScheduledClass[] = [
+  {
+    id: 'c1',
+    subject: 'Toán Học Giải Tích 12',
+    time: '10:00 - 11:30',
+    teacher: 'Thầy Nguyễn Hải Nam',
+    room: 'toan-tin-k12',
+    status: 'live',
+  },
+  {
+    id: 'c2',
+    subject: 'Vật Lý Đại Cương',
+    time: '14:00 - 15:30',
+    teacher: 'Cô Lê Thu Thảo',
+    room: 'vat-ly-12',
+    status: 'scheduled',
+  },
+];
+
+export function getScheduledClasses(): ScheduledClass[] {
+  try {
+    const data = localStorage.getItem(STORAGE_KEY_SCHEDULE);
+    if (!data) {
+      // Lưu mock ban đầu vào localStorage luôn
+      localStorage.setItem(STORAGE_KEY_SCHEDULE, JSON.stringify(MOCK_INITIAL_CLASSES));
+      return MOCK_INITIAL_CLASSES;
+    }
+    return JSON.parse(data);
+  } catch (e) {
+    console.error('Error reading scheduled classes:', e);
+    return MOCK_INITIAL_CLASSES;
+  }
+}
+
+export function saveScheduledClass(cls: ScheduledClass): void {
+  try {
+    const current = getScheduledClasses();
+    const idx = current.findIndex(c => c.id === cls.id);
+    let updated: ScheduledClass[];
+    if (idx > -1) {
+      updated = current.map(c => c.id === cls.id ? cls : c);
+    } else {
+      updated = [...current, cls];
+    }
+    localStorage.setItem(STORAGE_KEY_SCHEDULE, JSON.stringify(updated));
+  } catch (e) {
+    console.error('Error saving scheduled class:', e);
+  }
+}
+
+export function deleteScheduledClass(id: string): void {
+  try {
+    const current = getScheduledClasses();
+    const updated = current.filter(c => c.id !== id);
+    localStorage.setItem(STORAGE_KEY_SCHEDULE, JSON.stringify(updated));
+  } catch (e) {
+    console.error('Error deleting scheduled class:', e);
+  }
+}
