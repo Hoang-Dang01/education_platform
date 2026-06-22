@@ -1,0 +1,76 @@
+/* ============================================================
+   ADMIN — QUẢN LÝ NGƯỜI DÙNG
+   ============================================================ */
+
+.admin-toolbar {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.admin-search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-secondary);
+}
+
+.admin-search input {
+  border: none;
+  background: transparent;
+  outline: none;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  width: 180px;
+}
+
+.admin-filter-select,
+.role-select {
+  padding: 0.45rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+}
+
+.role-select.role-admin { color: #f87171; border-color: rgba(239, 68, 68, 0.3); }
+.role-select.role-manager { color: #fbbf24; border-color: rgba(245, 158, 11, 0.3); }
+.role-select.role-teacher { color: var(--color-primary-light); border-color: rgba(99, 102, 241, 0.3); }
+.role-select.role-student { color: var(--text-secondary); }
+
+.row-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: 6px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.02);
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.row-action-btn.danger { color: var(--color-danger-light); }
+.row-action-btn.danger:hover { background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.5); }
+.row-action-btn.success { color: var(--color-success-light); }
+.row-action-btn.success:hover { background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.5); }
+
+.empty-row {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 2rem !important;
+}

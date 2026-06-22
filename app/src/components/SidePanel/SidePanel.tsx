@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useClass } from '../context/ClassContext';
+import { useClass } from '../../context/ClassContext';
 import { MessageSquare, Users, Send, Download, X, CheckCircle, Clock } from 'lucide-react';
 import './SidePanel.css';
 
@@ -42,26 +42,33 @@ export const SidePanel: React.FC = () => {
         : p.activeTimeSeconds > 120 
           ? 'Đủ điều kiện' 
           : 'Chưa đủ điều kiện';
+
+      const joinedStr = p.joinedAt instanceof Date 
+        ? p.joinedAt.toLocaleTimeString('vi-VN') 
+        : new Date(p.joinedAt).toLocaleTimeString('vi-VN');
+
       return [
-        p.name,
-        p.role === 'teacher' ? 'Giáo viên' : 'Học sinh',
-        p.joinedAt.toLocaleTimeString('vi-VN'),
+        `"${p.name.replace(/"/g, '""')}"`,
+        `"${p.role === 'teacher' ? 'Giáo viên' : 'Học sinh'}"`,
+        `"${joinedStr}"`,
         p.activeTimeSeconds,
-        attendanceStatus,
+        `"${attendanceStatus}"`,
       ];
     });
 
-    const csvContent = 
-      'data:text/csv;charset=utf-8,\uFEFF' + 
-      [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
-    
-    const encodedUri = encodeURI(csvContent);
+    let csvContent = '\uFEFF'; // Excel UTF-8 BOM
+    csvContent += headers.join(',') + '\n';
+    csvContent += rows.map(r => r.join(',')).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `diem_danh_lop_hoc_${Date.now()}.csv`);
+    link.href = url;
+    link.download = `diem_danh_lop_hoc_${Date.now()}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   if (!panelOpen) return null;

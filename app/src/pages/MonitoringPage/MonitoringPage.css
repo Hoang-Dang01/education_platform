@@ -1,0 +1,215 @@
+/* ============================================================
+   GIÁM SÁT LỚP HỌC (Admin / Manager)
+   ============================================================ */
+
+.monitor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.25rem;
+}
+
+.monitor-card {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  cursor: pointer;
+}
+
+.monitor-card-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.monitor-card-head h3 {
+  flex: 1;
+  font-size: 1rem;
+  margin: 0;
+}
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.7);
+  animation: pulse-light 1.5s infinite;
+}
+
+.live-dot.warn {
+  background: #f59e0b;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.7);
+}
+
+.monitor-quality {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.monitor-quality.quality-excellent { color: var(--color-success-light); }
+.monitor-quality.quality-good { color: var(--color-primary-light); }
+.monitor-quality.quality-poor { color: var(--color-warning-light); }
+.monitor-quality.quality-critical { color: var(--color-danger-light); }
+
+.monitor-room {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.monitor-room code {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  color: var(--text-primary);
+}
+
+.monitor-stats {
+  display: flex;
+  gap: 1rem;
+}
+
+.monitor-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.monitor-stat small {
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.monitor-join-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.6rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-primary-light);
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.15), rgba(139, 92, 246, 0.15));
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.monitor-join-btn:hover {
+  box-shadow: 0 0 15px var(--color-primary-glow);
+  transform: translateY(-1px);
+}
+
+/* ============================================================
+   GIÁM SÁT THỜI GIAN THỰC — telemetry, chẩn đoán
+   ============================================================ */
+
+/* KPI nhỏ gọn (6 chỉ số tổng quan) */
+.monitor-kpi-grid {
+  grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
+}
+
+.monitor-mini-kpi {
+  padding: 1rem 1.1rem;
+}
+
+.monitor-mini-kpi .kpi-body h3 {
+  font-size: 1.8rem;
+}
+
+/* Dòng chẩn đoán nhỏ trên thẻ lớp */
+.monitor-diag-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.monitor-diag-line.diag-healthy { color: var(--color-success-light); }
+.monitor-diag-line.diag-host,
+.monitor-diag-line.diag-infra { color: var(--color-danger-light); }
+.monitor-diag-line.diag-participant { color: var(--color-warning-light); }
+
+/* Banner chẩn đoán lớn */
+.diagnosis-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 1.1rem 1.35rem;
+  border-left: 4px solid var(--text-muted);
+}
+
+.diagnosis-banner h4 {
+  margin: 0 0 0.25rem;
+  font-size: 0.98rem;
+}
+
+.diagnosis-banner p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.diag-confidence {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: capitalize;
+}
+
+.diagnosis-banner.diag-healthy { border-left-color: var(--color-success); }
+.diagnosis-banner.diag-healthy > svg { color: var(--color-success-light); }
+.diagnosis-banner.diag-host,
+.diagnosis-banner.diag-infra { border-left-color: var(--color-danger); }
+.diagnosis-banner.diag-host > svg,
+.diagnosis-banner.diag-infra > svg { color: var(--color-danger-light); }
+.diagnosis-banner.diag-participant { border-left-color: var(--color-warning); }
+.diagnosis-banner.diag-participant > svg { color: var(--color-warning-light); }
+
+/* Bảng telemetry */
+.reports-table tr.row-issue td {
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.conn-pill {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.conn-pill.conn-connected { background: rgba(16, 185, 129, 0.12); color: var(--color-success-light); }
+.conn-pill.conn-reconnecting { background: rgba(245, 158, 11, 0.14); color: var(--color-warning-light); }
+.conn-pill.conn-disconnected { background: rgba(239, 68, 68, 0.12); color: var(--color-danger-light); }
+
+.cam-mic {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.device-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}

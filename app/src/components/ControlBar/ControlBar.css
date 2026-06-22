@@ -90,6 +90,30 @@
   background: rgba(16, 185, 129, 0.3);
 }
 
+/* Chờ giáo viên duyệt chia sẻ màn hình */
+.control-bar .action-btn.pending {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.4);
+  color: var(--color-warning-light);
+  cursor: progress;
+}
+
+/* Đã được duyệt — sẵn sàng chọn màn hình */
+.control-bar .action-btn.approved {
+  background: rgba(16, 185, 129, 0.18);
+  border-color: rgba(16, 185, 129, 0.5);
+  color: var(--color-success-light);
+  animation: pulse-glow 1.5s infinite;
+}
+
+.control-bar .action-btn .spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .control-bar .action-btn.hand-active {
   background: rgba(245, 158, 11, 0.15);
   border-color: rgba(245, 158, 11, 0.4);
@@ -150,4 +174,17 @@
 
 .badge-counter.info {
   background-color: var(--color-primary-light);
+}
+
+.control-bar .action-btn.disabled {
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.15);
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.control-bar .action-btn.disabled:hover {
+  transform: none;
+  color: rgba(255, 255, 255, 0.15);
 }
