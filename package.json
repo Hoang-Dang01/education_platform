@@ -13,6 +13,7 @@
     "lint:web": "npm run lint -w apps/web",
     "lint:api": "npm run lint -w apps/api",
     "test:web": "npm run test -w apps/web",
-    "test:api": "npm run test -w apps/api"
+    "test:api": "npm run test -w apps/api",
+    "prisma:seed": "npm run db:seed -w apps/api"
   }
 }

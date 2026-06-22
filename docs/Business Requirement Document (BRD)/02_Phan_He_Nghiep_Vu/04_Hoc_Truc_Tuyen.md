@@ -6,13 +6,14 @@ Phân hệ Học trực tuyến cung cấp môi trường giảng dạy và họ
 Phân hệ này đóng vai trò là nền tảng tổ chức các buổi học trực tuyến, được tích hợp trực tiếp với hệ thống LMS và các chức năng điểm danh, giám sát và báo cáo.
 
 ## 4.2. Quản lý phòng học trực tuyến (Meeting Room)
-* **Mô tả:** Mỗi buổi học được tổ chức dưới dạng một phòng học trực tuyến gắn với lịch học của lớp. Giáo viên và học viên có thể tham gia phòng học thông qua hệ thống mà không cần sử dụng nền tảng họp trực tuyến bên thứ ba.
+* **Mô tả:** Mỗi buổi học được tổ chức dưới dạng một phòng học trực tuyến gắn với lịch học của lớp. Luồng nghiệp vụ điều phối (Meeting Orchestration) bao gồm: xác thực người dùng, kiểm tra lịch học, phân quyền tham gia (giáo viên/học viên), quản lý trạng thái phiên học (Session) và sinh Token gia nhập phòng học được làm chủ hoàn toàn bởi **EduMeet Backend**. Cơ sở hạ tầng hội nghị truyền hình bên thứ ba (như Jitsi Meet SFU) chỉ được tái sử dụng ở tầng truyền dẫn luồng truyền thông (Media Transport Layer) mà không kiểm soát trạng thái phòng hay nghiệp vụ đào tạo.
 * **Chức năng:**
-  * Tạo phòng học trực tuyến.
-  * Tham gia phòng học.
-  * Rời phòng học.
-  * Quản lý danh sách người tham gia.
-  * Theo dõi trạng thái kết nối của người dùng.
+  * Điều phối và xác thực quyền gia nhập phòng học (qua API `/meetings/join`).
+  * Khởi tạo và kết thúc phiên học (Session Lifecycle) ở backend.
+  * Tham gia phòng học bằng Token cấu hình được cấp bởi EduMeet.
+  * Rời phòng học và tự động cập nhật trạng thái session.
+  * Quản lý danh sách người tham gia thực tế trong cơ sở dữ liệu.
+  * Theo dõi trạng thái kết nối của người dùng qua WebSocket Gateway của EduMeet.
 
 ## 4.3. Camera và Microphone
 * **Mô tả:** Cho phép người tham gia sử dụng hình ảnh và âm thanh trong quá trình học tập nhằm tăng tính tương tác giữa giáo viên và học viên.

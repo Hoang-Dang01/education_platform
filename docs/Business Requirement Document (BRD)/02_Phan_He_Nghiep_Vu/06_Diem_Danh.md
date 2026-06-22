@@ -8,7 +8,7 @@ Khác với hình thức điểm danh truyền thống chỉ xác nhận sự c�
 ## 6.2. Nguyên tắc hoạt động
 Việc điểm danh được thực hiện hoàn toàn tự động dựa trên trạng thái kết nối của người dùng trong phòng học trực tuyến.
 
-Khi người dùng tham gia hoặc rời khỏi lớp học, hệ thống sẽ ghi nhận các sự kiện tương ứng và lưu vào lịch sử tham gia của buổi học. Toàn bộ dữ liệu được xử lý tự động, không yêu cầu giáo viên thực hiện điểm danh thủ công.
+Khi người dùng tham gia, rời khỏi, hoặc mất kết nối, hệ thống client ghi nhận và báo cáo lên **EduMeet Backend** qua WebSocket/API. Toàn bộ dữ liệu điểm danh và thông số sự kiện được tổng hợp động ở máy chủ EduMeet. Khi lớp học kết thúc, hệ thống sẽ tự động lưu trữ thông tin điểm danh của phiên học đó vĩnh viễn vào Cơ sở dữ liệu của EduMeet, không yêu cầu giáo viên thực hiện điểm danh thủ công.
 
 ## 6.3. Các sự kiện ghi nhận
 Trong quá trình tham gia lớp học, hệ thống ghi nhận các loại sự kiện sau:
