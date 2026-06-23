@@ -1,0 +1,9 @@
+# Caddy configuration for LiveKit SSL & Reverse Proxy
+livekit.yourdomain.com { # Replace with your actual domain name pointing to the VPS IP
+    reverse_proxy livekit:7880 {
+        # Standard proxy headers for WebSockets signaling stability
+        header_up Host {host}
+        header_up X-Real-IP {remote}
+        header_up X-Forwarded-For {remote}
+    }
+}

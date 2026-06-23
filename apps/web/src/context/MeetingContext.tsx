@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { jitsiService } from '../lib/jitsiService';
+import { JitsiClient } from '../lib/jitsiService';
+import { LiveKitClient } from '../lib/media/livekitClient';
+import type { MediaClient } from '../lib/media/media-client.interface';
 import { api } from '../lib/api';
 import type { UserRole } from '../lib/roles';
 import { roleFromJitsi, isInstructor } from '../lib/roles';
@@ -9,7 +11,43 @@ import { getMockParticipants, getInitialChatMessages } from '../lib/mockData';
 
 // Determine if we are in mock mode (?mock=true)
 const isMockMode = () =>
-  typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('mock') === 'true';
+  import.meta.env.DEV &&
+  import.meta.env.VITE_ENABLE_MOCK === 'true' &&
+  typeof window !== 'undefined' &&
+  new URLSearchParams(window.location.search).get('mock') === 'true';
+
+function mapDeviceError(error: any): string {
+  const errorStr = String(error || '').toLowerCase();
+  const errorName = error?.name || '';
+  
+  if (errorName === 'NotAllowedError' || errorStr.includes('permission') || errorStr.includes('notallowed')) {
+    return 'Bạn đã từ chối quyền truy cập camera/microphone. Vui lòng cấp lại quyền trong cài đặt trình duyệt.';
+  }
+  if (errorName === 'NotFoundError' || errorStr.includes('notfound') || errorStr.includes('devices not found')) {
+    return 'Không tìm thấy thiết bị camera/microphone trên hệ thống của bạn.';
+  }
+  if (errorName === 'NotReadableError' || errorStr.includes('notreadable') || errorStr.includes('in use') || errorStr.includes('could not start video source')) {
+    return 'Camera/microphone đang bị chiếm dụng bởi ứng dụng khác (Zoom, Teams, etc.). Vui lòng tắt ứng dụng đó và thử lại.';
+  }
+  if (errorName === 'OverconstrainedError' || errorStr.includes('overconstrained')) {
+    return 'Thiết bị camera/microphone không hỗ trợ cấu hình độ phân giải video yêu cầu.';
+  }
+  if (errorStr.includes('token') || errorStr.includes('auth') || errorStr.includes('expired')) {
+    return 'Phiên tham gia lớp học đã hết hạn hoặc mã truy cập không hợp lệ.';
+  }
+  if (errorStr.includes('server') || errorStr.includes('failed to connect') || errorStr.includes('dns')) {
+    return 'Không thể kết nối tới máy chủ phòng học. Vui lòng kiểm tra kết nối mạng của bạn.';
+  }
+  return `Lỗi kết nối lớp học: ${error?.message || error}`;
+}
+
+// Factory to create lazy media client
+const createMediaClient = (providerName: string): MediaClient => {
+  if (providerName === 'livekit') {
+    return new LiveKitClient();
+  }
+  return new JitsiClient();
+};
 
 const qualityFromMetrics = (rtt: number, loss: number, jitter: number): Participant['connectionQuality'] => {
   if (loss > 5 || rtt > 300 || jitter > 50) return 'critical';
@@ -48,6 +86,7 @@ interface MeetingContextType {
   breakoutRoomsCount: number;
   loading: boolean;
   error: string | null;
+  connectionState: 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
   joinSession: (sessionId: string, userName: string, userRole: UserRole) => Promise<void>;
   leaveSession: () => Promise<void>;
   endSession: () => Promise<void>;
@@ -75,9 +114,19 @@ export const MeetingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [connectionState, setConnectionState] = useState<'connecting' | 'connected' | 'reconnecting' | 'disconnected'>('disconnected');
+
+  // Synchronous join lock to prevent click spam
+  const joinLockRef = useRef(false);
+
+  // Reference to manage reconnect timeout (30 seconds policy)
+  const reconnectTimeoutRef = useRef<any>(null);
 
   // Connection session tracking for attendance duration calculation
   const joinedAtSecondsRef = useRef<number | null>(null);
+
+  // Lazy-loaded media client reference
+  const mediaClientRef = useRef<MediaClient | null>(null);
 
   // Roster / Chat states
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -308,7 +357,11 @@ export const MeetingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         // Use sendBeacon for reliable leave notification when browser tab closes
         const data = JSON.stringify({ joinedAtSeconds: joinedAtSecondsRef.current });
         navigator.sendBeacon(url, data);
-        jitsiService.disconnect();
+        
+        if (mediaClientRef.current) {
+          mediaClientRef.current.disconnect();
+          mediaClientRef.current = null;
+        }
       }
     };
 
@@ -317,16 +370,27 @@ export const MeetingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [screen, sessionId]);
 
   const joinSession = async (sessId: string, userName: string, userRole: UserRole) => {
+    if (joinLockRef.current || mediaClientRef.current) {
+      console.warn('[MeetingContext] Join session is already in progress or connected.');
+      return;
+    }
+    joinLockRef.current = true;
     setLoading(true);
     setError(null);
+    setConnectionState('connecting');
     try {
       // 1. Fetch Session Token & RoomName from Backend
       const response = await api.joinSession(sessId);
-      const { roomId } = response; // roomId will map to Jitsi conference name
+      const { roomId, token, serverUrl } = response;
 
       setSessionId(sessId);
       setRoomName(roomId);
       setScreen('classroom');
+
+      // Initialize media client lazily via Factory
+      const activeProvider = import.meta.env.VITE_MEDIA_PROVIDER || 'jitsi';
+      const client = createMediaClient(activeProvider);
+      mediaClientRef.current = client;
 
       const localDevice = getDeviceInfo();
       const localUser: Participant = {
@@ -353,6 +417,7 @@ export const MeetingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setParticipants(getMockParticipants(userName, userRole));
         setChatMessages(getInitialChatMessages());
         setSimulateTelemetry(true);
+        setConnectionState('connected');
         setLoading(false);
         return;
       }
@@ -360,8 +425,8 @@ export const MeetingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setParticipants([localUser]);
       setChatMessages([]);
 
-      // 2. Connect Jitsi Meet WebRTC
-      jitsiService.connect(roomId, userName, userRole, {
+      // 2. Connect WebRTC Media Client
+      client.connect(roomId, userName, userRole, {
         onLocalTracksReady: (tracks) => {
           const vTrack = tracks.find(t => t.getType() === 'video');
           const aTrack = tracks.find(t => t.getType() === 'audio');
@@ -369,7 +434,7 @@ export const MeetingProvider: React.FC<{ children: React.ReactNode }> = ({ child
             prev.map(p => p.isLocal ? { ...p, videoTrack: vTrack, audioTrack: aTrack } : p)
           );
         },
-        onRemoteTrackAdded: (track) => {
+        onTrackAdded: (track) => {
           const pId = track.getParticipantId();
           const type = track.getType();
 
@@ -408,7 +473,7 @@ export const MeetingProvider: React.FC<{ children: React.ReactNode }> = ({ child
             });
           });
         },
-        onRemoteTrackRemoved: (track) => {
+        onTrackRemoved: (track) => {
           const pId = track.getParticipantId();
           const type = track.getType();
 
@@ -479,9 +544,9 @@ export const MeetingProvider: React.FC<{ children: React.ReactNode }> = ({ child
           setDominantSpeakerId(id);
         },
         onConnectionStatsReceived: (id, stats) => {
-          const rtt = stats.transport?.rtt || 0;
-          const loss = stats.transport?.loss || 0;
-          const jitter = stats.transport?.jitter || 0;
+          const rtt = stats.latency ?? 0;
+          const loss = stats.packetLoss ?? 0;
+          const jitter = stats.jitter ?? 0;
           const quality = qualityFromMetrics(rtt, loss, jitter);
           setParticipants(prev =>
             prev.map(p => (p.id === id || (p.isLocal && id === 'local-user') ? { ...p, connectionQuality: quality } : p))
@@ -521,6 +586,7 @@ export const MeetingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         },
         onConferenceJoined: async () => {
           console.log('Classroom conference joined on WebRTC.');
+          setConnectionState('connected');
           joinedAtSecondsRef.current = Math.floor(Date.now() / 1000);
           // Log join events to backend attendance
           if (userRole === 'student') {
@@ -531,21 +597,58 @@ export const MeetingProvider: React.FC<{ children: React.ReactNode }> = ({ child
             }
           }
         },
+        onConnectionReconnecting: () => {
+          console.warn('[MeetingContext] Connection is reconnecting...');
+          setConnectionState('reconnecting');
+          
+          if (reconnectTimeoutRef.current) {
+            clearTimeout(reconnectTimeoutRef.current);
+          }
+          reconnectTimeoutRef.current = setTimeout(() => {
+            console.error('[MeetingContext] Reconnection timeout exceeded 30s. Force leaving.');
+            setError('Không thể kết nối lại lớp học do sự cố đường truyền mạng kéo dài.');
+            leaveSession();
+          }, 30000);
+        },
+        onConnectionReconnected: () => {
+          console.log('[MeetingContext] Connection successfully reconnected.');
+          setConnectionState('connected');
+          if (reconnectTimeoutRef.current) {
+            clearTimeout(reconnectTimeoutRef.current);
+            reconnectTimeoutRef.current = null;
+          }
+        },
         onConnectionFailed: (err) => {
-          console.error('Jitsi fail, fallback to mock:', err);
-          setParticipants(getMockParticipants(userName, userRole));
-          setChatMessages(getInitialChatMessages());
-          setSimulateTelemetry(true);
+          console.error('[MeetingContext] Connection failed:', err);
+          const friendlyMsg = mapDeviceError(err);
+          setError(friendlyMsg);
+          setLoading(false);
+          joinLockRef.current = false;
+          setScreen('lms');
+          setConnectionState('disconnected');
+          
+          if (isMockMode()) {
+            console.log('[MeetingContext] Fallback to mock mode due to dev settings');
+            setParticipants(getMockParticipants(userName, userRole));
+            setChatMessages(getInitialChatMessages());
+            setSimulateTelemetry(true);
+            setScreen('classroom');
+            setError(null);
+          }
         },
         onConnectionDisconnected: () => {
-          console.log('Jitsi disconnected.');
+          console.log('Media disconnected.');
+          setConnectionState('disconnected');
         }
-      });
+      }, token, serverUrl);
     } catch (err: any) {
-      setError(err.message || 'Không thể tham gia phòng học.');
+      const friendlyMsg = mapDeviceError(err);
+      setError(friendlyMsg);
       setScreen('lms');
+      setConnectionState('disconnected');
     } finally {
       setLoading(false);
+      joinLockRef.current = false;
     }
   };
 
@@ -561,7 +664,15 @@ export const MeetingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
       }
       
-      jitsiService.disconnect();
+      if (mediaClientRef.current) {
+        mediaClientRef.current.disconnect();
+        mediaClientRef.current = null;
+      }
+
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
       
       // Clean up local media
       screenStream?.getTracks().forEach(t => t.stop());
@@ -586,11 +697,13 @@ export const MeetingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setSimulateTelemetry(false);
       setIsBreakoutActive(false);
       setBreakoutTimeLeft(0);
+      setConnectionState('disconnected');
       joinedAtSecondsRef.current = null;
     } catch (e: any) {
       setError(e.message || 'Lỗi khi rời phòng học.');
     } finally {
       setLoading(false);
+      joinLockRef.current = false;
     }
   };
 
@@ -610,7 +723,7 @@ export const MeetingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const toggleAudio = () => {
     setIsAudioMuted(prev => {
       const next = !prev;
-      jitsiService.setAudioMuted(next);
+      mediaClientRef.current?.setAudioMuted(next);
       setParticipants(pList => pList.map(p => (p.isLocal ? { ...p, isAudioMuted: next } : p)));
       return next;
     });
@@ -619,7 +732,7 @@ export const MeetingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const toggleVideo = () => {
     setIsVideoMuted(prev => {
       const next = !prev;
-      jitsiService.setVideoMuted(next);
+      mediaClientRef.current?.setVideoMuted(next);
       setParticipants(pList => pList.map(p => (p.isLocal ? { ...p, isVideoMuted: next } : p)));
       return next;
     });
@@ -639,7 +752,7 @@ export const MeetingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     } else {
       try {
-        const desktopTrack = await jitsiService.startScreenShare();
+        const desktopTrack = await mediaClientRef.current?.startScreenShare();
         setScreenTrack(desktopTrack);
         setScreenSharingUserId('local-user');
         setIsScreenSharing(true);
@@ -661,7 +774,7 @@ export const MeetingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setShareApproved(false);
       setShareApprovalPending(false);
     } else {
-      jitsiService.stopScreenShare()
+      mediaClientRef.current?.stopScreenShare()
         .then(() => {
           setScreenTrack(null);
           setScreenSharingUserId('');
@@ -669,7 +782,7 @@ export const MeetingProvider: React.FC<{ children: React.ReactNode }> = ({ child
           setShareApproved(false);
           setShareApprovalPending(false);
         })
-        .catch(err => console.error('Error stopping Jitsi screen share:', err));
+        .catch(err => console.error('Error stopping screen share:', err));
     }
   };
 
@@ -701,7 +814,7 @@ export const MeetingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const toggleHandRaise = () => {
     setIsHandRaised(prev => {
       const next = !prev;
-      jitsiService.setHandRaised(next);
+      mediaClientRef.current?.setHandRaised(next);
       setParticipants(pList =>
         pList.map(p => p.isLocal ? { ...p, isHandRaised: next, handRaiseTime: next ? Date.now() : undefined } : p)
       );
@@ -725,7 +838,7 @@ export const MeetingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const sendMessage = (text: string) => {
     if (!text.trim()) return;
-    jitsiService.sendChatMessage(text);
+    mediaClientRef.current?.sendChatMessage(text);
     const localUser = participants.find(p => p.isLocal);
     const newMsg: ChatMessage = {
       id: `msg-${Date.now()}`,
@@ -743,7 +856,7 @@ export const MeetingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const lowerParticipantHand = (id: string) => {
-    jitsiService.lowerParticipantHand(id);
+    mediaClientRef.current?.lowerParticipantHand(id);
     setParticipants(pList =>
       pList.map(p => (p.id === id ? { ...p, isHandRaised: false, handRaiseTime: undefined } : p))
     );
@@ -799,6 +912,7 @@ export const MeetingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         breakoutRoomsCount,
         loading,
         error,
+        connectionState,
         joinSession,
         leaveSession,
         endSession,

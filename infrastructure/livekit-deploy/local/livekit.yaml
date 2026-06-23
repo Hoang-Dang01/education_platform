@@ -1,0 +1,23 @@
+port: 7880
+bind_addresses:
+  - ""
+
+# API Credentials (matching backend NestJS configuration)
+keys:
+  devkey: secret
+
+logging:
+  level: info
+
+rtc:
+  # Using Google's STUN for local ICE candidates resolution
+  stun_servers:
+    - stun.l.google.com:19302
+  
+  # WebRTC UDP Port Range matching bridge mapping
+  port_range_start: 50000
+  port_range_end: 50100
+
+  # Fallback to TCP connection if UDP is blocked
+  use_tcp: true
+  tcp_port: 7881

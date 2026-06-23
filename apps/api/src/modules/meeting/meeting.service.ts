@@ -4,9 +4,10 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  Inject,
 } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import { LivekitService } from './livekit.service';
+import { MEDIA_PROVIDER, MediaProvider } from './media/media-provider.interface';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
@@ -15,7 +16,7 @@ export class MeetingService {
 
   constructor(
     private prisma: PrismaService,
-    private livekitService: LivekitService,
+    @Inject(MEDIA_PROVIDER) private mediaProvider: MediaProvider,
     private configService: ConfigService,
   ) {}
 
@@ -94,11 +95,11 @@ export class MeetingService {
       include: { class: true },
     });
 
-    // Initialize room on LiveKit
+    // Initialize room on media provider
     try {
-      await this.livekitService.createRoom(session.roomName);
+      await this.mediaProvider.createRoom(session.roomName);
     } catch (e) {
-      this.logger.warn(`Failed to initialize LiveKit room: ${e.message}`);
+      this.logger.warn(`Failed to initialize media room: ${e.message}`);
     }
 
     return updatedSession;
@@ -170,7 +171,7 @@ export class MeetingService {
             include: { class: true },
           });
 
-          await this.livekitService.createRoom(session.roomName);
+          await this.mediaProvider.createRoom(session.roomName);
         } else {
           throw new ForbiddenException('Lớp học chưa bắt đầu và không có lịch học nào đang hoạt động.');
         }
@@ -203,14 +204,12 @@ export class MeetingService {
     let token = '';
 
     try {
-      token = await this.livekitService.generateToken(
+      token = await this.mediaProvider.generateAccessToken(
         session.roomName,
-        user.id,
-        user.name,
-        isTeacher,
+        { id: user.id, name: user.name, isTeacher },
       );
     } catch (e) {
-      this.logger.warn(`Failed to generate LiveKit token: ${e.message}`);
+      this.logger.warn(`Failed to generate media token: ${e.message}`);
     }
 
     return {
@@ -250,20 +249,18 @@ export class MeetingService {
     });
 
     try {
-      await this.livekitService.createRoom(roomName);
+      await this.mediaProvider.createRoom(roomName);
     } catch (e) {
-      this.logger.warn(`Failed to create LiveKit room: ${e.message}`);
+      this.logger.warn(`Failed to create media room: ${e.message}`);
     }
 
     const isTeacher = true;
     const serverUrl = this.configService.get<string>('LIVEKIT_WS_URL') || 'ws://localhost:7880';
     let token = '';
     try {
-      token = await this.livekitService.generateToken(
+      token = await this.mediaProvider.generateAccessToken(
         roomName,
-        user.id,
-        user.name,
-        isTeacher,
+        { id: user.id, name: user.name, isTeacher },
       );
     } catch (e) {
       this.logger.warn(`Failed to generate token: ${e.message}`);
@@ -299,11 +296,11 @@ export class MeetingService {
       throw new ForbiddenException('Bạn không phải là giáo viên phụ trách buổi học này.');
     }
 
-    // 1. Close the room on LiveKit
+    // 1. Close the room on media provider
     try {
-      await this.livekitService.closeRoom(session.roomName);
+      await this.mediaProvider.deleteRoom(session.roomName);
     } catch (e) {
-      this.logger.warn(`Failed to close LiveKit room on server: ${e.message}`);
+      this.logger.warn(`Failed to close media room on server: ${e.message}`);
     }
 
     // 2. Update status in DB

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useMeeting } from '../../context/MeetingContext';
-import { VideoGrid, JitsiTrack } from '../VideoGrid/VideoGrid';
+import { VideoGrid, MediaTrackRenderer } from '../VideoGrid/VideoGrid';
 import { ControlBar } from '../ControlBar/ControlBar';
 import { SidePanel } from '../SidePanel/SidePanel';
 import { Clock, BookOpen, Presentation, MonitorUp, AlertTriangle, WifiOff, X, Server, Activity } from 'lucide-react';
@@ -27,7 +27,9 @@ export const ClassroomScreen: React.FC = () => {
     diagnosticAlerts,
     dismissAlert,
     simulationMode,
-    triggerSimulation
+    triggerSimulation,
+    connectionState,
+    leaveSession
   } = useMeeting();
   const [duration, setDuration] = useState(0);
   const [showSimulation, setShowSimulation] = useState(false);
@@ -60,6 +62,19 @@ export const ClassroomScreen: React.FC = () => {
 
   return (
     <div className="classroom-container">
+      {/* Reconnecting Passive Banner */}
+      {connectionState === 'reconnecting' && (
+        <div className="reconnecting-passive-banner">
+          <div className="reconnecting-banner-content">
+            <span className="reconnecting-spinner"></span>
+            <WifiOff size={16} className="reconnecting-icon-anim" />
+            <span className="reconnecting-text">Đường truyền không ổn định. Đang tự động kết nối lại...</span>
+          </div>
+          <button onClick={leaveSession} className="reconnecting-leave-btn">
+            Thoát lớp học
+          </button>
+        </div>
+      )}
       {/* Background glowing orbs */}
       <div className="glow-orb glow-orb-primary"></div>
       <div className="glow-orb glow-orb-purple"></div>
@@ -124,7 +139,7 @@ export const ClassroomScreen: React.FC = () => {
               {/* Large shared viewport — màn hình thật nếu có stream, ngược lại slide demo */}
               <div className="shared-viewport-container glass-panel">
                 {screenTrack ? (
-                  <JitsiTrack track={screenTrack} className="real-screen-feed" />
+                  <MediaTrackRenderer track={screenTrack} className="real-screen-feed" />
                 ) : screenStream ? (
                   <ScreenShareVideo stream={screenStream} />
                 ) : (

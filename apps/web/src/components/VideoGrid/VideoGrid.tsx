@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { useMeeting } from '../../context/MeetingContext';
 import { useAuth } from '../../context/AuthContext';
 import type { Participant } from '../../context/ClassContext';
+import type { MediaTrack } from '../../lib/media/media-client.interface';
 import { Mic, MicOff, Hand, Sparkles, Wifi, ShieldAlert, VolumeX, Monitor, Laptop, Tablet, Smartphone } from 'lucide-react';
 import { isInstructor, roleLabel, can } from '../../lib/roles';
 import type { DeviceType } from '../../lib/mockData';
@@ -18,20 +19,20 @@ const deviceIcon = (d?: DeviceType) => {
 };
 
 // Sub-component to safely handle HTML5 track attachments
-export interface JitsiTrackProps {
-  track: any;
+export interface MediaTrackProps {
+  track: MediaTrack;
   className?: string;
   isMuted?: boolean;
 }
 
-export const JitsiTrack: React.FC<JitsiTrackProps> = ({ track, className, isMuted = false }) => {
+export const MediaTrackRenderer: React.FC<MediaTrackProps> = ({ track, className, isMuted = false }) => {
   const elementRef = useRef<HTMLVideoElement | HTMLAudioElement>(null);
 
   useEffect(() => {
     const el = elementRef.current;
     if (!el || !track) return;
 
-    // Attach Jitsi track to HTML element
+    // Attach media track to HTML element
     track.attach(el);
 
     return () => {
@@ -113,12 +114,12 @@ export const VideoGrid: React.FC = () => {
           >
             {/* Audio track rendering (only for remote peers to avoid echoing local microphone) */}
             {!p.isLocal && p.audioTrack && (
-              <JitsiTrack track={p.audioTrack} isMuted={p.isAudioMuted} />
+              <MediaTrackRenderer track={p.audioTrack} isMuted={p.isAudioMuted} />
             )}
 
             {/* Video view: Jitsi track feed or avatar placeholder */}
             {!p.isVideoMuted && p.videoTrack ? (
-              <JitsiTrack
+              <MediaTrackRenderer
                 track={p.videoTrack}
                 isMuted={p.isLocal} // Local webcam stream is muted locally
                 className="card-video-feed"

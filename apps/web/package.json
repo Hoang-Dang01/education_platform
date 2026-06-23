@@ -12,6 +12,7 @@
   "dependencies": {
     "jquery": "^4.0.0",
     "lib-jitsi-meet": "https://github.com/jitsi/lib-jitsi-meet/releases/download/v2164.0.0+3df0d953/lib-jitsi-meet.tgz",
+    "livekit-client": "^2.19.2",
     "lucide-react": "^1.21.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"
