@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useClass } from '../../context/ClassContext';
+import { useAuth } from '../../context/AuthContext';
+import { useMeeting } from '../../context/MeetingContext';
 import {
   Calendar, Clock, ArrowRight, TrendingUp, UserCheck, Activity,
   Users, Radio, Wifi, Lock, BookOpen, GraduationCap, Presentation, Eye,
-  Plus, Edit, Trash2, X,
+  Plus, Edit, Trash2, X, Loader2, AlertCircle,
 } from 'lucide-react';
 import { dashboardByRole, mockLiveClasses } from '../../lib/mockData';
 import type { KpiIconName } from '../../lib/mockData';
@@ -26,7 +29,13 @@ const KPI_ICONS: Record<KpiIconName, React.ReactNode> = {
 };
 
 export const DashboardPage: React.FC = () => {
-  const { role, joinRoom, userName } = useClass();
+  const { user } = useAuth();
+  const { upcomingSessions, loading: lmsLoading, error: lmsError, refreshLmsData } = useClass();
+  const { joinSession, loading: meetingLoading } = useMeeting();
+  
+  const role = user?.role || 'student';
+  const userName = user?.name || '';
+  
   const [classes, setClasses] = useState<ScheduledClass[]>([]);
   const [dateFilter, setDateFilter] = useState<'today' | 'tomorrow' | 'all'>('today');
   
@@ -43,8 +52,31 @@ export const DashboardPage: React.FC = () => {
   const data = dashboardByRole[role];
 
   useEffect(() => {
-    setClasses(getScheduledClasses());
-  }, []);
+    // Merge real database sessions with local storage schedules for mock fallback
+    const localSchedules = getScheduledClasses();
+    const mappedSessions: ScheduledClass[] = upcomingSessions.map(sess => {
+      const start = sess.startTime ? new Date(sess.startTime) : new Date(sess.createdAt);
+      const dateStr = start.toISOString().split('T')[0];
+      
+      const startStr = start.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false });
+      const end = new Date(start.getTime() + 90 * 60000);
+      const endStr = end.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false });
+      
+      return {
+        id: sess.id, // Real session UUID from DB
+        subject: `${sess.class?.course?.name || ''} - ${sess.class?.name || ''}`,
+        time: `${startStr} - ${endStr}`,
+        date: dateStr,
+        teacher: sess.class?.teacher?.name || 'Giáo viên',
+        room: sess.roomName,
+        status: sess.status as 'live' | 'scheduled',
+      };
+    });
+
+    // Remove duplicates from local if they share roomName with real DB ones
+    const filteredLocal = localSchedules.filter(l => !mappedSessions.some(m => m.room === l.room));
+    setClasses([...mappedSessions, ...filteredLocal]);
+  }, [upcomingSessions]);
 
   const handleOpenModal = (cls: ScheduledClass | null = null) => {
     if (cls) {
@@ -58,9 +90,16 @@ export const DashboardPage: React.FC = () => {
     } else {
       setEditClass(null);
       setSubject('');
-      setTime('08:00 - 09:30');
-      setDate(new Date().toISOString().split('T')[0]);
-      setTeacher(role === 'teacher' ? (userName || 'Thầy Nguyễn Hải Nam') : 'Cô Lê Thu Thảo');
+      
+      const targetDate = new Date().toISOString().split('T')[0];
+      const nextHour = new Date().getHours() + 1;
+      const startHour = nextHour < 24 ? nextHour : 8;
+      const endHour = startHour + 1;
+      const pad = (n: number) => String(n).padStart(2, '0');
+      setTime(`${pad(startHour)}:00 - ${pad(endHour % 24)}:30`);
+      
+      setDate(targetDate);
+      setTeacher(role === 'teacher' ? (userName || '') : '');
       setRoom('phong-' + Math.floor(Math.random() * 900 + 100));
       setStatus('scheduled');
     }
@@ -78,6 +117,32 @@ export const DashboardPage: React.FC = () => {
       alert('Vui lòng điền đầy đủ thông tin lịch học');
       return;
     }
+
+    // Kiểm tra lịch học không được trong quá khứ
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    
+    if (date < todayStr) {
+      alert('Không thể tạo hoặc cập nhật lịch học trong quá khứ.');
+      return;
+    }
+    
+    if (date === todayStr) {
+      const timeMatch = time.match(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]/);
+      if (timeMatch) {
+        const startTimeStr = timeMatch[0];
+        const [hours, minutes] = startTimeStr.split(':').map(Number);
+        
+        const scheduleDateTime = new Date();
+        scheduleDateTime.setHours(hours, minutes, 0, 0);
+        
+        if (scheduleDateTime <= now) {
+          alert('Giờ bắt đầu của lịch học phải lớn hơn thời điểm hiện tại.');
+          return;
+        }
+      }
+    }
+
     const newCls: ScheduledClass = {
       id: editClass?.id || 'class-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
       subject,
@@ -125,6 +190,30 @@ export const DashboardPage: React.FC = () => {
   };
 
   const isEditable = role === 'teacher' || role === 'manager' || role === 'admin';
+
+  if (lmsLoading || meetingLoading) {
+    return (
+      <div className="page-container dashboard-page animate-fade-in" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <div style={{ textAlign: 'center' }}>
+          <Loader2 className="animate-spin text-primary" size={48} style={{ margin: '0 auto 1rem' }} />
+          <p>{meetingLoading ? 'Đang kết nối phòng học WebRTC...' : 'Đang tải dữ liệu LMS...'}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (lmsError) {
+    return (
+      <div className="page-container dashboard-page animate-fade-in" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <div className="glass-panel" style={{ padding: '2rem', textAlign: 'center', maxWidth: '400px' }}>
+          <AlertCircle className="text-danger" size={48} style={{ margin: '0 auto 1rem' }} />
+          <h3>Đã xảy ra lỗi</h3>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>{lmsError}</p>
+          <button onClick={refreshLmsData} className="save-btn-modal" style={{ width: 'auto', padding: '8px 20px' }}>Thử lại</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="page-container dashboard-page animate-fade-in">
@@ -226,7 +315,7 @@ export const DashboardPage: React.FC = () => {
                     
                     {cls.status === 'live' ? (
                       <button
-                        onClick={() => joinRoom(cls.room, userName || 'Học viên', role)}
+                        onClick={() => joinSession(cls.id, userName || 'Học viên', role)}
                         className="live-join-btn animate-pulse-light"
                       >
                         <span>Vào lớp</span>
@@ -258,7 +347,7 @@ export const DashboardPage: React.FC = () => {
                   </div>
                   <div className="class-item-action">
                     <button
-                      onClick={() => joinRoom(c.room, userName || 'Người giám sát', role)}
+                      onClick={() => joinSession(c.id, userName || 'Người giám sát', role)}
                       className="live-join-btn"
                     >
                       <Eye size={14} />
@@ -293,7 +382,7 @@ export const DashboardPage: React.FC = () => {
       </div>
 
       {/* Glassmorphism Schedule Modal Form */}
-      {isModalOpen && (
+      {isModalOpen && createPortal(
         <div className="custom-modal-overlay">
           <div className="custom-modal-content glass-panel animate-scale-up">
             <div className="modal-header">
@@ -320,6 +409,7 @@ export const DashboardPage: React.FC = () => {
                   <label>Ngày Học</label>
                   <input
                     type="date"
+                    min={new Date().toISOString().split('T')[0]}
                     value={date}
                     onChange={e => setDate(e.target.value)}
                     required
@@ -349,17 +439,6 @@ export const DashboardPage: React.FC = () => {
               </div>
 
               <div className="form-group">
-                <label>Mã Phòng Học (Jitsi Room Name)</label>
-                <input
-                  type="text"
-                  placeholder="Ví dụ: toan-tin-k12"
-                  value={room}
-                  onChange={e => setRoom(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
                 <label>Trạng Thái</label>
                 <select
                   value={status}
@@ -380,7 +459,8 @@ export const DashboardPage: React.FC = () => {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

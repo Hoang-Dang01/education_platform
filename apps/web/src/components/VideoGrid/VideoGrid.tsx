@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { useClass } from '../../context/ClassContext';
+import { useMeeting } from '../../context/MeetingContext';
+import { useAuth } from '../../context/AuthContext';
 import type { Participant } from '../../context/ClassContext';
 import { Mic, MicOff, Hand, Sparkles, Wifi, ShieldAlert, VolumeX, Monitor, Laptop, Tablet, Smartphone } from 'lucide-react';
 import { isInstructor, roleLabel, can } from '../../lib/roles';
@@ -66,11 +67,13 @@ export const JitsiTrack: React.FC<JitsiTrackProps> = ({ track, className, isMute
 };
 
 export const VideoGrid: React.FC = () => {
-  const { participants, role, muteParticipant, lowerParticipantHand, dominantSpeakerId } = useClass();
+  const { participants, muteParticipant, lowerParticipantHand, dominantSpeakerId } = useMeeting();
+  const { user } = useAuth();
+  const role = user?.role || 'student';
 
   // Telemetry/thiết bị của NGƯỜI KHÁC chỉ host (GV) + Quản lý/Admin được xem (BRD 7).
   // Học viên chỉ thấy số liệu trên thẻ của chính mình.
-  const canSeeAllTelemetry = isInstructor(role);
+  const canSeeAllTelemetry = isInstructor(role as any);
 
   // Determine grid template style depending on participant counts
   const getGridClass = (count: number) => {
@@ -97,7 +100,7 @@ export const VideoGrid: React.FC = () => {
 
   return (
     <div className={`video-grid-container ${getGridClass(participants.length)}`}>
-      {participants.map(p => {
+      {participants.map((p: any) => {
         // Highlight active speaker
         const isSpeaking = dominantSpeakerId === p.id || (p.isLocal && dominantSpeakerId === 'local-user');
         

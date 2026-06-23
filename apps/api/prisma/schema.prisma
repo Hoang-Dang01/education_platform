@@ -9,21 +9,50 @@ datasource db {
   provider = "postgresql"
 }
 
+enum UserRole {
+  admin
+  manager
+  teacher
+  student
+}
+
+enum MaterialScope {
+  course
+  personal
+}
+
 model User {
-  id         String   @id @default(uuid())
-  email      String   @unique
-  password   String
-  name       String
-  role       String   // 'student' | 'teacher' | 'manager' | 'admin'
-  status     String   @default("active") // 'active' | 'suspended'
-  lastActive String   @default("Đang hoạt động")
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id                 String            @id @default(uuid())
+  email              String?           @unique
+  username           String            @unique
+  password           String
+  name               String
+  role               UserRole
+  status             String            @default("active") // 'active' | 'suspended'
+  lastActive         String            @default("Đang hoạt động")
+  mustChangePassword Boolean           @default(true)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
 
   // Relations
-  classes      Class[]      @relation("TeacherClasses")
-  enrollments  Enrollment[]
-  attendances  Attendance[]
+  classes           Class[]           @relation("TeacherClasses")
+  enrollments       Enrollment[]
+  attendances       Attendance[]
+  telemetrySamples  TelemetrySample[]
+  studentProfile    StudentProfile?
+  uploadedMaterials CourseMaterial[]  @relation("UserMaterials")
+}
+
+model StudentProfile {
+  id          String    @id @default(uuid())
+  userId      String    @unique
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studentCode String    @unique // STU-2026-00125
+  phone       String?
+  dob         DateTime?
+  cccd        String?   @unique
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model Course {
@@ -82,7 +111,8 @@ model Session {
   updatedAt DateTime  @updatedAt
 
   // Relations
-  attendances Attendance[]
+  attendances      Attendance[]
+  telemetrySamples TelemetrySample[]
 }
 
 model Attendance {
@@ -107,15 +137,32 @@ model Attendance {
 }
 
 model CourseMaterial {
-  id         String   @id @default(uuid())
-  courseId   String
-  course     Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  title      String
-  fileName   String
-  fileType   String   // 'pdf' | 'slide' | 'video' | 'image'
-  fileSize   String
-  filePath   String
-  uploadedAt DateTime @default(now())
-  uploadedBy String
-  isPrivate  Boolean  @default(false)
+  id           String        @id @default(uuid())
+  courseId     String?
+  course       Course?       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title        String
+  fileName     String
+  fileType     String        // 'pdf' | 'slide' | 'video' | 'image'
+  fileSize     String
+  filePath     String
+  uploadedAt   DateTime      @default(now())
+  uploadedById String
+  uploadedBy   User          @relation("UserMaterials", fields: [uploadedById], references: [id], onDelete: Cascade)
+  isPrivate    Boolean       @default(false)
+  scope        MaterialScope @default(course)
+  isDeleted    Boolean       @default(false)
+}
+
+model TelemetrySample {
+  id          String   @id @default(uuid())
+  sessionId   String
+  session     Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pingMs      Float
+  packetLoss  Float
+  jitterMs    Float
+  bitrateKbps Float?
+  fps         Float?
+  createdAt   DateTime @default(now())
 }

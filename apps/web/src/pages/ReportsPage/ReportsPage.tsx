@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Download, CheckCircle2, Clock, ArrowLeft, Search, Calendar, Filter, Mail, Printer } from 'lucide-react';
+import { Download, CheckCircle2, Clock, ArrowLeft, Search, Calendar, Filter, Mail, Printer, Loader2 } from 'lucide-react';
+import { api } from '../../lib/api';
 import { mockReportSessions } from '../../lib/mockData';
 import { getSessionReports } from '../../lib/localDb';
 import type { SessionReport } from '../../lib/localDb';
 import './ReportsPage.css';
 
 export const ReportsPage: React.FC = () => {
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [selectedSession, setSelectedSession] = useState<SessionReport | null>(null);
   const [reports, setReports] = useState<SessionReport[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [loadingReport, setLoadingReport] = useState(false);
 
   // Filter States
   const [searchQuery, setSearchQuery] = useState('');
@@ -23,27 +27,75 @@ export const ReportsPage: React.FC = () => {
   const [schedSaved, setSchedSaved] = useState(false);
 
   useEffect(() => {
-    const local = getSessionReports();
+    setLoadingHistory(true);
     
-    const mockReportsMapped: SessionReport[] = mockReportSessions.map((m: any) => ({
-      id: m.id,
-      roomName: m.roomName,
-      date: m.date,
-      presentStudents: m.presentStudents,
-      totalStudents: m.totalStudents,
-      avgDurationMins: m.avgDurationMins,
-      avgConnectionQuality: m.avgConnectionQuality,
-      details: m.details.map((d: any) => ({
-        name: d.name,
-        role: d.role,
-        presentTimeMins: d.presentTimeMins,
-        totalTimeMins: d.totalTimeMins,
-        pct: d.pct,
-        telemetry: d.telemetry
-      }))
-    }));
+    // Fetch real history sessions
+    api.getHistorySessions()
+      .then(sessions => {
+        const mappedReal: SessionReport[] = sessions.map(s => {
+          const dateStr = s.startTime 
+            ? new Date(s.startTime).toLocaleDateString('vi-VN') 
+            : new Date(s.createdAt).toLocaleDateString('vi-VN');
+          return {
+            id: s.id,
+            roomName: `${s.class?.course?.name || ''} - ${s.class?.name || ''}`,
+            date: dateStr,
+            presentStudents: 0,
+            totalStudents: s.class?.enrollments?.length || 0,
+            avgDurationMins: s.endTime && s.startTime 
+              ? Math.round((new Date(s.endTime).getTime() - new Date(s.startTime).getTime()) / 60000) 
+              : 0,
+            avgConnectionQuality: 'good',
+            details: []
+          };
+        });
 
-    setReports([...local, ...mockReportsMapped]);
+        const local = getSessionReports();
+        const mockReportsMapped: SessionReport[] = mockReportSessions.map((m: any) => ({
+          id: m.id,
+          roomName: m.roomName,
+          date: m.date,
+          presentStudents: m.presentStudents,
+          totalStudents: m.totalStudents,
+          avgDurationMins: m.avgDurationMins,
+          avgConnectionQuality: m.avgConnectionQuality,
+          details: m.details.map((d: any) => ({
+            name: d.name,
+            role: d.role,
+            presentTimeMins: d.presentTimeMins,
+            totalTimeMins: d.totalTimeMins,
+            pct: d.pct,
+            telemetry: d.telemetry
+          }))
+        }));
+
+        setReports([...mappedReal, ...local, ...mockReportsMapped]);
+      })
+      .catch(err => {
+        console.error('Failed to fetch history sessions:', err);
+        const local = getSessionReports();
+        const mockReportsMapped: SessionReport[] = mockReportSessions.map((m: any) => ({
+          id: m.id,
+          roomName: m.roomName,
+          date: m.date,
+          presentStudents: m.presentStudents,
+          totalStudents: m.totalStudents,
+          avgDurationMins: m.avgDurationMins,
+          avgConnectionQuality: m.avgConnectionQuality,
+          details: m.details.map((d: any) => ({
+            name: d.name,
+            role: d.role,
+            presentTimeMins: d.presentTimeMins,
+            totalTimeMins: d.totalTimeMins,
+            pct: d.pct,
+            telemetry: d.telemetry
+          }))
+        }));
+        setReports([...local, ...mockReportsMapped]);
+      })
+      .finally(() => {
+        setLoadingHistory(false);
+      });
 
     // Load saved scheduler config
     const savedConfig = localStorage.getItem('edumeet_report_schedule_config');
@@ -58,6 +110,83 @@ export const ReportsPage: React.FC = () => {
       }
     }
   }, []);
+
+  useEffect(() => {
+    if (!selectedSessionId) {
+      setSelectedSession(null);
+      return;
+    }
+    
+    // Check if selectedSessionId is from mock data (e.g., starting with "r", "lc" or "local")
+    if (selectedSessionId.length !== 36) {
+      const found = reports.find(r => r.id === selectedSessionId);
+      if (found) {
+        setSelectedSession(found);
+      }
+      return;
+    }
+
+    setLoadingReport(true);
+    api.getSessionReport(selectedSessionId)
+      .then(s => {
+        const dateStr = s.startTime 
+          ? new Date(s.startTime).toLocaleDateString('vi-VN') 
+          : new Date(s.createdAt).toLocaleDateString('vi-VN');
+        const present = s.attendances?.filter((a: any) => a.user?.role === 'student' && a.presentTimeMins > 0).length || 0;
+        const total = s.class?.enrollments?.length || s.attendances?.filter((a: any) => a.user?.role === 'student').length || 0;
+        
+        let totalPing = 0, totalLoss = 0, totalJitter = 0, count = 0;
+        const details = (s.attendances || []).map((a: any) => {
+          totalPing += a.avgPing || 0;
+          totalLoss += a.avgLoss || 0;
+          totalJitter += a.avgJitter || 0;
+          count++;
+          return {
+            name: a.user?.name || '',
+            role: a.user?.role === 'teacher' ? 'Giáo viên' : 'Học viên',
+            presentTimeMins: a.presentTimeMins,
+            totalTimeMins: a.totalTimeMins || 90,
+            pct: Math.round(a.pct),
+            telemetry: {
+              ping: Math.round(a.avgPing),
+              jitter: Math.round(a.avgJitter),
+              loss: Math.round(a.avgLoss * 10) / 10
+            }
+          };
+        });
+
+        const avgPing = count > 0 ? totalPing / count : 0;
+        const avgLoss = count > 0 ? totalLoss / count : 0;
+        const avgJitter = count > 0 ? totalJitter / count : 0;
+        
+        let avgQuality: SessionReport['avgConnectionQuality'] = 'excellent';
+        if (avgLoss > 5 || avgPing > 300 || avgJitter > 50) avgQuality = 'critical';
+        else if (avgLoss > 3 || avgPing > 200 || avgJitter > 30) avgQuality = 'poor';
+        else if (avgLoss > 1 || avgPing > 100 || avgJitter > 20) avgQuality = 'good';
+
+        const mapped: SessionReport = {
+          id: s.id,
+          roomName: `${s.class?.course?.name || ''} - ${s.class?.name || ''}`,
+          date: dateStr,
+          presentStudents: present,
+          totalStudents: total || 1,
+          avgDurationMins: s.endTime && s.startTime 
+            ? Math.round((new Date(s.endTime).getTime() - new Date(s.startTime).getTime()) / 60000) 
+            : 0,
+          avgConnectionQuality: avgQuality,
+          details
+        };
+        setSelectedSession(mapped);
+      })
+      .catch(err => {
+        console.error('Failed to load session report:', err);
+        alert('Không thể tải báo cáo phiên học này.');
+        setSelectedSessionId(null);
+      })
+      .finally(() => {
+        setLoadingReport(false);
+      });
+  }, [selectedSessionId, reports]);
 
   const getQualityText = (quality: SessionReport['avgConnectionQuality']) => {
     switch (quality) {
@@ -218,10 +347,32 @@ export const ReportsPage: React.FC = () => {
     return matchesSearch && matchesDate && matchesAttendance;
   });
 
+  if (loadingHistory) {
+    return (
+      <div className="page-container reports-page animate-fade-in" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <div style={{ textAlign: 'center' }}>
+          <Loader2 className="animate-spin text-primary" size={48} style={{ margin: '0 auto 1rem' }} />
+          <p>Đang tải danh sách lịch sử...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadingReport) {
+    return (
+      <div className="page-container reports-page animate-fade-in" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <div style={{ textAlign: 'center' }}>
+          <Loader2 className="animate-spin text-primary" size={48} style={{ margin: '0 auto 1rem' }} />
+          <p>Đang tải chi tiết báo cáo...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (selectedSession) {
     return (
       <div className="page-container session-report-page animate-fade-in printable-report">
-        <button onClick={() => setSelectedSession(null)} className="back-btn glass-panel no-print">
+        <button onClick={() => setSelectedSessionId(null)} className="back-btn glass-panel no-print">
           <ArrowLeft size={16} />
           <span>Quay lại</span>
         </button>
@@ -426,7 +577,7 @@ export const ReportsPage: React.FC = () => {
           <div
             key={session.id}
             className="session-report-card glass-panel"
-            onClick={() => setSelectedSession(session)}
+            onClick={() => setSelectedSessionId(session.id)}
           >
             <div className="session-card-left">
               <span className="session-date-tag">{session.date}</span>

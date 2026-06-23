@@ -5,6 +5,8 @@ import { AppService } from './app.service';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { MeetingModule } from './modules/meeting/meeting.module';
+import { TelemetryModule } from './modules/telemetry/telemetry.module';
+import { MaterialsModule } from './modules/materials/materials.module';
 
 @Module({
   imports: [
@@ -15,6 +17,8 @@ import { MeetingModule } from './modules/meeting/meeting.module';
     DatabaseModule,
     AuthModule,
     MeetingModule,
+    TelemetryModule,
+    MaterialsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

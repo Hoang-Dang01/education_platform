@@ -431,3 +431,75 @@ html, body, #root {
   color: var(--text-secondary);
 }
 
+/* Fix welcome banner background and text contrast for light theme */
+[data-theme="light"] .welcome-banner {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(255, 255, 255, 0.8) 100%) !important;
+}
+
+/* Common Add Class Button styling (applicable across pages) */
+.add-class-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(99, 102, 241, 0.2);
+  color: #c7d2fe;
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.add-class-btn:hover {
+  background: rgba(99, 102, 241, 0.35);
+  border-color: rgba(99, 102, 241, 0.5);
+  color: white;
+}
+
+[data-theme="light"] .add-class-btn {
+  background: rgba(99, 102, 241, 0.12);
+  border-color: rgba(99, 102, 241, 0.25);
+  color: var(--color-primary-light);
+}
+
+[data-theme="light"] .add-class-btn:hover {
+  background: var(--color-primary-light);
+  color: white;
+}
+
+/* Date Tabs in Dashboard */
+.date-tabs-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.date-tab-btn {
+  padding: 0.45rem 0.9rem;
+  border-radius: 6px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.date-tab-btn:hover {
+  background: var(--glass-bg-hover);
+  color: var(--text-primary);
+  border-color: var(--glass-border-hover);
+}
+
+.date-tab-btn.active {
+  background: var(--color-primary-light);
+  color: white;
+  border-color: var(--color-primary-light);
+  box-shadow: 0 2px 8px var(--color-primary-glow);
+}
+

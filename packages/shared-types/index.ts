@@ -3,22 +3,25 @@ export type UserStatus = 'active' | 'suspended';
 export type MeetingStatus = 'live' | 'scheduled';
 
 export interface RegisterRequest {
-  email: string;
+  email?: string | null;
+  username: string;
   password: string;
   name: string;
 }
 
 export interface LoginRequest {
-  email: string;
+  username: string;
   password: string;
 }
 
 export interface AuthUserDto {
   id: string;
-  email: string;
+  username: string;
+  email?: string | null;
   role: string;
   name: string;
   status: string;
+  mustChangePassword?: boolean;
 }
 
 export interface AuthResponse {

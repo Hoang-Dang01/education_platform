@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useClass } from '../../context/ClassContext';
+import { useMeeting } from '../../context/MeetingContext';
 import { VideoGrid, JitsiTrack } from '../VideoGrid/VideoGrid';
 import { ControlBar } from '../ControlBar/ControlBar';
 import { SidePanel } from '../SidePanel/SidePanel';
@@ -28,7 +28,7 @@ export const ClassroomScreen: React.FC = () => {
     dismissAlert,
     simulationMode,
     triggerSimulation
-  } = useClass();
+  } = useMeeting();
   const [duration, setDuration] = useState(0);
   const [showSimulation, setShowSimulation] = useState(false);
 

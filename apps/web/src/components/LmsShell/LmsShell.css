@@ -20,7 +20,9 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  z-index: 10;
+  z-index: 1;
+  position: relative;
+  transition: width var(--transition-normal), padding var(--transition-normal);
 }
 
 .sidebar-logo {
@@ -34,6 +36,7 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   margin-bottom: 2rem;
+  transition: gap var(--transition-normal), justify-content var(--transition-normal);
 }
 
 .sidebar-logo .logo-icon {
@@ -64,7 +67,7 @@
   align-items: center;
   gap: 0.75rem;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all var(--transition-normal);
   text-align: left;
 }
 
@@ -89,12 +92,14 @@
   background: var(--glass-bg-hover);
   border: 1px solid var(--glass-border);
   width: 100%;
+  transition: all var(--transition-normal);
 }
 
 .user-info-section {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  transition: all var(--transition-normal);
 }
 
 .logout-btn {
@@ -148,6 +153,88 @@
   color: var(--color-primary-light);
 }
 
+/* Sidebar Collapse Toggle Button */
+.sidebar-toggle-btn {
+  position: absolute;
+  top: 20px;
+  right: -18px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--glass-border);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  z-index: 10;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  transition: all var(--transition-normal);
+}
+
+.sidebar-toggle-btn:hover {
+  background: var(--color-primary-light);
+  color: #fff;
+  border-color: var(--color-primary-light);
+  transform: scale(1.1);
+  box-shadow: 0 0 8px var(--color-primary-glow);
+}
+
+/* Collapsed Sidebar Styles */
+.lms-sidebar.collapsed {
+  width: 80px;
+  padding: 1.5rem 0.75rem;
+}
+
+.lms-sidebar.collapsed .sidebar-logo {
+  gap: 0;
+  justify-content: center;
+}
+
+.lms-sidebar.collapsed .sidebar-logo span,
+.lms-sidebar.collapsed .nav-item span,
+.lms-sidebar.collapsed .user-info {
+  opacity: 0;
+  max-width: 0;
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
+}
+
+.lms-sidebar.collapsed .nav-item {
+  padding: 0.875rem 0;
+  justify-content: center;
+  gap: 0;
+}
+
+.lms-sidebar.collapsed .sidebar-user-card {
+  padding: 0.5rem;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: center;
+  background: transparent;
+  border-color: transparent;
+}
+
+.lms-sidebar.collapsed .user-info-section {
+  gap: 0;
+  justify-content: center;
+}
+
+/* Smooth transition for text elements */
+.lms-sidebar .sidebar-logo span,
+.lms-sidebar .nav-item span,
+.lms-sidebar .user-info {
+  opacity: 1;
+  max-width: 200px;
+  display: inline-block;
+  vertical-align: middle;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: opacity var(--transition-normal), max-width var(--transition-normal), margin var(--transition-normal), padding var(--transition-normal);
+}
+
 /* Main content workspace */
 .lms-main-content {
   flex: 1;
@@ -156,7 +243,7 @@
   flex-direction: column;
   padding: 1.5rem;
   overflow: hidden;
-  z-index: 5;
+  z-index: 2;
 }
 
 .lms-content-header {

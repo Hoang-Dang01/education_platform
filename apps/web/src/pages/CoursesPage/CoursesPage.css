@@ -347,9 +347,9 @@
   width: 100%;
   max-width: 500px;
   padding: 2rem;
-  background: rgba(30, 41, 71, 0.65);
+  background: var(--bg-secondary) !important;
   border: 1px solid var(--glass-border);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
   border-radius: 12px;
 }
 
@@ -420,10 +420,10 @@
 .form-group select {
   width: 100%;
   padding: 0.75rem 1rem;
-  background: rgba(15, 23, 42, 0.4);
+  background: var(--bg-primary);
   border: 1px solid var(--glass-border);
   border-radius: 8px;
-  color: white;
+  color: var(--text-primary);
   font-family: var(--font-body);
   font-size: 0.9rem;
   outline: none;
@@ -432,17 +432,18 @@
 
 .form-group input[type="text"]:focus,
 .form-group select:focus {
-  border-color: var(--color-purple-light);
-  background: rgba(15, 23, 42, 0.6);
+  border-color: var(--color-purple);
+  background: var(--bg-primary);
+  box-shadow: 0 0 8px var(--color-purple-glow);
 }
 
 .form-group select option {
-  background: #1e2947;
-  color: white;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
 }
 
 .drag-drop-zone {
-  border: 2px dashed rgba(255, 255, 255, 0.15);
+  border: 2px dashed var(--glass-border-hover);
   border-radius: 8px;
   padding: 2rem 1.5rem;
   background: rgba(255, 255, 255, 0.01);
@@ -457,8 +458,8 @@
 }
 
 .drag-drop-zone:hover {
-  border-color: var(--color-purple-light);
-  background: rgba(139, 92, 246, 0.03);
+  border-color: var(--color-purple);
+  background: rgba(139, 92, 246, 0.05);
 }
 
 .drag-drop-zone.drag-active {
@@ -562,7 +563,7 @@
 .cancel-btn {
   padding: 0.65rem 1.25rem;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--bg-primary);
   border: 1px solid var(--glass-border);
   color: var(--text-secondary);
   font-family: var(--font-body);
@@ -573,7 +574,7 @@
 }
 
 .cancel-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--glass-bg-hover);
   color: var(--text-primary);
 }
 

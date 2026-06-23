@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { useClass } from '../../context/ClassContext';
+import { useAuth } from '../../context/AuthContext';
+import { useMeeting } from '../../context/MeetingContext';
 import {
   Radio, Users, Wifi, ShieldAlert, Eye, ArrowLeft, AlertTriangle, CheckCircle2,
   Monitor, Laptop, Tablet, Smartphone, Cable, Signal, ShieldCheck, Mic, MicOff, Video, VideoOff,
@@ -41,7 +42,10 @@ const metricClass = (key: MetricKey, value: number) => {
 };
 
 export const MonitoringPage: React.FC = () => {
-  const { joinRoom, userName, role } = useClass();
+  const { user } = useAuth();
+  const { joinSession } = useMeeting();
+  const role = user?.role || 'student';
+  const userName = user?.name || '';
   const [selected, setSelected] = useState<MockLiveClass | null>(null);
   const classes = mockLiveClasses;
 
@@ -75,7 +79,7 @@ export const MonitoringPage: React.FC = () => {
           </div>
           <button
             className="monitor-join-btn"
-            onClick={() => joinRoom(selected.room, userName || 'Người giám sát', role)}
+            onClick={() => joinSession(selected.id, userName || 'Người giám sát', role)}
           >
             <Eye size={14} />
             <span>Vào giám sát</span>

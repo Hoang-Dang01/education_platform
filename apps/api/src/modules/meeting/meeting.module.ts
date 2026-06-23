@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { MeetingController } from './meeting.controller';
 import { CourseController } from './course.controller';
 import { ClassController } from './class.controller';
 import { SessionController } from './session.controller';
@@ -12,7 +11,6 @@ import { AuthModule } from '../auth/auth.module';
 @Module({
   imports: [AuthModule],
   controllers: [
-    MeetingController,
     CourseController,
     ClassController,
     SessionController,

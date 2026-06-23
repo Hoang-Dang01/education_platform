@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useClass } from '../../context/ClassContext';
+import { useAuth } from '../../context/AuthContext';
 import { WelcomeScreen } from '../WelcomeScreen/WelcomeScreen';
 import { DashboardPage } from '../../pages/DashboardPage/DashboardPage';
 import { CoursesPage } from '../../pages/CoursesPage/CoursesPage';
@@ -7,12 +8,17 @@ import { ReportsPage } from '../../pages/ReportsPage/ReportsPage';
 import { UserManagementPage } from '../../pages/UserManagementPage/UserManagementPage';
 import { MonitoringPage } from '../../pages/MonitoringPage/MonitoringPage';
 import { CalendarPage } from '../../pages/CalendarPage/CalendarPage';
-import { LayoutDashboard, BookOpen, BarChart3, Video, User, Bell, Shield, LogOut, Sun, Moon, Users, MonitorPlay, Calendar } from 'lucide-react';
+import { LayoutDashboard, BookOpen, BarChart3, Video, User, Bell, Shield, LogOut, Sun, Moon, Users, MonitorPlay, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { can, roleLabel } from '../../lib/roles';
 import './LmsShell.css';
 
 export const LmsShell: React.FC = () => {
-  const { activePage, setActivePage, userName, role, logout, theme, toggleTheme } = useClass();
+  const { activePage, setActivePage, theme, toggleTheme } = useClass();
+  const { user, logout } = useAuth();
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  
+  const userName = user?.name || '';
+  const role = user?.role || 'student';
 
   // Quyền hiển thị các mục điều hướng theo BRD 2.5
   const canViewReports = can(role, 'view_reports');
@@ -53,7 +59,15 @@ export const LmsShell: React.FC = () => {
       <div className="glow-orb glow-orb-purple"></div>
 
       {/* Sidebar Navigation */}
-      <aside className="lms-sidebar glass-panel">
+      <aside className={`lms-sidebar glass-panel ${isSidebarCollapsed ? 'collapsed' : ''}`}>
+        <button 
+          onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} 
+          className="sidebar-toggle-btn"
+          title={isSidebarCollapsed ? "Mở rộng thanh menu" : "Thu gọn thanh menu"}
+        >
+          {isSidebarCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+        </button>
+
         <div className="sidebar-logo">
           <BookOpen className="logo-icon" />
           <span>EduMeet</span>
@@ -63,6 +77,7 @@ export const LmsShell: React.FC = () => {
           <button
             onClick={() => setActivePage('dashboard')}
             className={`nav-item ${activePage === 'dashboard' ? 'active' : ''}`}
+            title={isSidebarCollapsed ? "Bảng điều khiển" : ""}
           >
             <LayoutDashboard size={18} />
             <span>Bảng điều khiển</span>
@@ -71,6 +86,7 @@ export const LmsShell: React.FC = () => {
           <button
             onClick={() => setActivePage('calendar')}
             className={`nav-item ${activePage === 'calendar' ? 'active' : ''}`}
+            title={isSidebarCollapsed ? "Lịch biểu" : ""}
           >
             <Calendar size={18} />
             <span>Lịch biểu</span>
@@ -79,6 +95,7 @@ export const LmsShell: React.FC = () => {
           <button
             onClick={() => setActivePage('courses')}
             className={`nav-item ${activePage === 'courses' ? 'active' : ''}`}
+            title={isSidebarCollapsed ? coursesLabel : ""}
           >
             <BookOpen size={18} />
             <span>{coursesLabel}</span>
@@ -88,6 +105,7 @@ export const LmsShell: React.FC = () => {
             <button
               onClick={() => setActivePage('reports')}
               className={`nav-item ${activePage === 'reports' ? 'active' : ''}`}
+              title={isSidebarCollapsed ? "Báo cáo chuyên cần" : ""}
             >
               <BarChart3 size={18} />
               <span>Báo cáo chuyên cần</span>
@@ -98,6 +116,7 @@ export const LmsShell: React.FC = () => {
             <button
               onClick={() => setActivePage('monitoring')}
               className={`nav-item ${activePage === 'monitoring' ? 'active' : ''}`}
+              title={isSidebarCollapsed ? "Giám sát lớp học" : ""}
             >
               <MonitorPlay size={18} />
               <span>Giám sát lớp học</span>
@@ -108,6 +127,7 @@ export const LmsShell: React.FC = () => {
             <button
               onClick={() => setActivePage('users')}
               className={`nav-item ${activePage === 'users' ? 'active' : ''}`}
+              title={isSidebarCollapsed ? "Quản lý người dùng" : ""}
             >
               <Users size={18} />
               <span>Quản lý người dùng</span>
@@ -117,6 +137,7 @@ export const LmsShell: React.FC = () => {
           <button
             onClick={() => setActivePage('lobby')}
             className={`nav-item ${activePage === 'lobby' ? 'active' : ''}`}
+            title={isSidebarCollapsed ? "Phòng học trực tuyến" : ""}
           >
             <Video size={18} />
             <span>Phòng học trực tuyến</span>

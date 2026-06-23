@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useClass } from '../../context/ClassContext';
-import { BookOpen, FileText, Video, Download, Upload, Search, ArrowLeft, Plus, Users, UserCheck, Trash2, X, FileImage, Folder } from 'lucide-react';
-import { mockCourses } from '../../lib/mockData';
+import { useAuth } from '../../context/AuthContext';
+import { BookOpen, FileText, Video, Download, Upload, Search, ArrowLeft, Plus, Users, UserCheck, Trash2, X, FileImage, Folder, Loader2, AlertCircle } from 'lucide-react';
 import type { MockCourse } from '../../lib/mockData';
 import { can } from '../../lib/roles';
-import { getMaterials, saveMaterial, deleteMaterial, getPersonalMaterials } from '../../lib/localDb';
-import type { LocalMaterial } from '../../lib/localDb';
+import { api } from '../../lib/api';
 import './CoursesPage.css';
 
 // Tiêu đề khu vực khóa học theo vai trò
@@ -17,15 +17,18 @@ const COURSE_HEADINGS: Record<string, { title: string; subtitle: string }> = {
 };
 
 export const CoursesPage: React.FC = () => {
-  const { role, userName } = useClass();
+  const { courses, loading: lmsLoading, error: lmsError, refreshLmsData } = useClass();
+  const { user } = useAuth();
+  const role = user?.role || 'student';
+  const userName = user?.name || '';
   const [selectedCourse, setSelectedCourse] = useState<MockCourse | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'courses' | 'personal'>('courses');
 
-  // Các state để lưu tài liệu từ IndexedDB và kiểm soát upload modal
-  const [localMaterials, setLocalMaterials] = useState<LocalMaterial[]>([]);
-  const [personalMaterials, setPersonalMaterials] = useState<LocalMaterial[]>([]);
+  // Các state kiểm soát tài liệu và upload
+  const [personalMaterials, setPersonalMaterials] = useState<any[]>([]);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [uploadTitle, setUploadTitle] = useState('');
   const [uploadType, setUploadType] = useState<'pdf' | 'slide' | 'video' | 'image'>('pdf');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -37,43 +40,94 @@ export const CoursesPage: React.FC = () => {
   const canShareMaterials = can(role, 'share_materials'); // admin, manager, teacher
   const heading = COURSE_HEADINGS[role] ?? COURSE_HEADINGS.student;
 
-  // Tải danh sách tài liệu từ IndexedDB khi người dùng chọn khóa học
-  const loadLocalMaterials = async (courseId: string) => {
-    try {
-      const list = await getMaterials(courseId);
-      setLocalMaterials(list);
-    } catch (err) {
-      console.error('Failed to load local materials:', err);
-    }
-  };
-
-  // Tải danh sách tài liệu cá nhân
+  // Tải danh sách tài liệu cá nhân từ backend
   const loadPersonalMaterials = async () => {
     try {
-      const list = await getPersonalMaterials(userName);
+      const list = await api.getPersonalMaterials();
       setPersonalMaterials(list);
     } catch (err) {
       console.error('Failed to load personal materials:', err);
     }
   };
 
+  // Đồng bộ hóa selectedCourse khi danh sách courses thay đổi (sau khi upload hoặc xóa)
   useEffect(() => {
     if (selectedCourse) {
-      loadLocalMaterials(selectedCourse.id);
-    } else {
-      setLocalMaterials([]);
+      const rawCourse = courses?.find(c => c.id === selectedCourse.id);
+      if (rawCourse) {
+        const mainClass = rawCourse.classes?.[0];
+        const teacherName = mainClass?.teacher?.name || 'Chưa phân công';
+        const totalStudents = rawCourse.classes?.reduce((acc: number, cls: any) => acc + (cls.enrollments?.length || 0), 0) || 0;
+        const completedSessions = rawCourse.classes?.reduce((acc: number, cls: any) => acc + (cls.sessions?.filter((s: any) => s.status === 'completed' || s.status === 'ended').length || 0), 0) || 0;
+        const totalSessions = rawCourse.classes?.reduce((acc: number, cls: any) => acc + (cls.sessions?.length || 0), 0) || 0;
+        
+        const updated: MockCourse = {
+          id: rawCourse.id,
+          name: rawCourse.name,
+          code: rawCourse.code,
+          desc: rawCourse.description || '',
+          teacher: teacherName,
+          progress: 75,
+          materialsCount: rawCourse.materials?.length || 0,
+          studentCount: totalStudents,
+          attendanceRate: 92.5,
+          sessionsDone: completedSessions,
+          sessionsTotal: totalSessions || 1,
+          materials: (rawCourse.materials || []).map((m: any) => ({
+            id: m.id,
+            title: m.title,
+            type: m.fileType as 'pdf' | 'slide' | 'video',
+            size: m.fileSize || 'Không rõ dung lượng',
+            url: m.filePath || '#',
+            uploadedBy: m.uploadedBy || 'Hệ thống'
+          }))
+        };
+        setSelectedCourse(updated);
+      } else {
+        setSelectedCourse(null);
+      }
     }
-  }, [selectedCourse]);
+  }, [courses]);
 
   useEffect(() => {
     if (activeTab === 'personal') {
       loadPersonalMaterials();
     }
-  }, [activeTab, userName]);
+  }, [activeTab]);
+
+  const mappedCourses: MockCourse[] = (courses || []).map((c: any) => {
+    const mainClass = c.classes?.[0];
+    const teacherName = mainClass?.teacher?.name || 'Chưa phân công';
+    const totalStudents = c.classes?.reduce((acc: number, cls: any) => acc + (cls.enrollments?.length || 0), 0) || 0;
+    const completedSessions = c.classes?.reduce((acc: number, cls: any) => acc + (cls.sessions?.filter((s: any) => s.status === 'completed' || s.status === 'ended').length || 0), 0) || 0;
+    const totalSessions = c.classes?.reduce((acc: number, cls: any) => acc + (cls.sessions?.length || 0), 0) || 0;
+    
+    return {
+      id: c.id,
+      name: c.name,
+      code: c.code,
+      desc: c.description || '',
+      teacher: teacherName,
+      progress: 75,
+      materialsCount: c.materials?.length || 0,
+      studentCount: totalStudents,
+      attendanceRate: 92.5,
+      sessionsDone: completedSessions,
+      sessionsTotal: totalSessions || 1,
+      materials: (c.materials || []).map((m: any) => ({
+        id: m.id,
+        title: m.title,
+        type: m.fileType as 'pdf' | 'slide' | 'video',
+        size: m.fileSize || 'Không rõ dung lượng',
+        url: m.filePath || '#',
+        uploadedBy: m.uploadedBy || 'Hệ thống'
+      }))
+    };
+  });
 
   // Giáo viên chỉ thấy lớp mình phụ trách; nếu không khớp tên thì hiển thị tất cả (fallback)
-  const taught = mockCourses.filter(c => c.teacher === userName);
-  const scopedCourses = role === 'teacher' && taught.length > 0 ? taught : mockCourses;
+  const taught = mappedCourses.filter(c => c.teacher === userName);
+  const scopedCourses = role === 'teacher' && taught.length > 0 ? taught : mappedCourses;
 
   const filteredCourses = scopedCourses.filter(c =>
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -100,16 +154,7 @@ export const CoursesPage: React.FC = () => {
     }
   };
 
-  const handleDownloadLocal = (material: LocalMaterial) => {
-    const url = URL.createObjectURL(material.fileBlob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = material.fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
+
 
   const handleDownloadMock = (title: string, type: string) => {
     const dummyText = `Đây là tài liệu giảng dạy cho môn học: ${title}\nLoại tài liệu: ${type}\nĐược tải về thông qua EduMeet.`;
@@ -195,47 +240,72 @@ export const CoursesPage: React.FC = () => {
     if (!selectedFile || !uploadTitle.trim()) return;
     if (activeTab === 'courses' && !selectedCourse) return;
 
+    setIsUploading(true);
     try {
-      const newMaterial: LocalMaterial = {
-        id: 'local-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
-        courseId: activeTab === 'courses' ? selectedCourse!.id : 'private',
-        title: uploadTitle.trim(),
-        fileName: selectedFile.name,
-        fileType: uploadType,
-        fileSize: formatFileSize(selectedFile.size),
-        fileBlob: selectedFile,
-        uploadedAt: new Date().toISOString(),
-        uploadedBy: userName || 'Hệ thống',
-        isPrivate: activeTab === 'personal'
-      };
-
-      await saveMaterial(newMaterial);
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      formData.append('title', uploadTitle.trim());
+      formData.append('scope', activeTab === 'courses' ? 'course' : 'personal');
       if (activeTab === 'courses' && selectedCourse) {
-        await loadLocalMaterials(selectedCourse.id);
+        formData.append('courseId', selectedCourse.id);
+      }
+      formData.append('isPrivate', (activeTab === 'personal').toString());
+
+      await api.uploadMaterial(formData);
+      
+      if (activeTab === 'courses' && selectedCourse) {
+        await refreshLmsData();
       } else {
         await loadPersonalMaterials();
       }
       closeModal();
     } catch (err) {
-      console.error('Failed to save material:', err);
-      alert('Có lỗi xảy ra khi lưu tài liệu. Vui lòng thử lại.');
+      console.error('Failed to upload material:', err);
+      alert('Có lỗi xảy ra khi tải tài liệu lên: ' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setIsUploading(false);
     }
   };
 
-  const handleDeleteLocalMaterial = async (id: string, isPrivateMat?: boolean) => {
+  const handleDeleteMaterial = async (id: string, isPrivateMat?: boolean) => {
     if (confirm('Bạn có chắc chắn muốn xóa tài liệu này?')) {
       try {
-        await deleteMaterial(id);
+        await api.deleteMaterial(id);
         if (isPrivateMat) {
           await loadPersonalMaterials();
-        } else if (selectedCourse) {
-          await loadLocalMaterials(selectedCourse.id);
+        } else {
+          await refreshLmsData();
         }
       } catch (err) {
         console.error('Failed to delete material:', err);
+        alert('Không thể xóa tài liệu: ' + (err instanceof Error ? err.message : String(err)));
       }
     }
   };
+
+  if (lmsLoading) {
+    return (
+      <div className="page-container courses-page animate-fade-in" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <div style={{ textAlign: 'center' }}>
+          <Loader2 className="animate-spin text-primary" size={48} style={{ margin: '0 auto 1rem' }} />
+          <p>Đang tải danh sách khóa học...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (lmsError) {
+    return (
+      <div className="page-container courses-page animate-fade-in" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <div className="glass-panel" style={{ padding: '2rem', textAlign: 'center', maxWidth: '400px' }}>
+          <AlertCircle className="text-danger" size={48} style={{ margin: '0 auto 1rem' }} />
+          <h3>Đã xảy ra lỗi</h3>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>{lmsError}</p>
+          <button onClick={refreshLmsData} className="save-btn-modal" style={{ width: 'auto', padding: '8px 20px' }}>Thử lại</button>
+        </div>
+      </div>
+    );
+  }
 
   if (selectedCourse) {
     return (
@@ -285,56 +355,45 @@ export const CoursesPage: React.FC = () => {
           </div>
 
           <div className="materials-list">
-            {/* Danh sách tài liệu mẫu có sẵn */}
-            {selectedCourse.materials.map(m => (
-              <div key={m.id} className="material-item-row glass-panel">
-                <div className="material-info">
-                  {getMaterialIcon(m.type)}
-                  <div className="material-title-group">
-                    <span className="material-title">{m.title}</span>
-                    <span className="material-uploader">Người tải lên: {m.uploadedBy || 'Hệ thống'}</span>
-                  </div>
-                  {m.size && <span className="material-size">{m.size}</span>}
-                </div>
-                <div className="material-actions">
-                  <button 
-                    className="download-btn-icon" 
-                    title="Tải xuống"
-                    onClick={() => handleDownloadMock(m.title, m.type)}
-                  >
-                    <Download size={14} />
-                  </button>
-                </div>
-              </div>
-            ))}
-
-            {/* Danh sách tài liệu tự tải lên (IndexedDB) */}
-            {localMaterials.map(m => {
+            {/* Danh sách tài liệu khóa học */}
+            {selectedCourse.materials.map(m => {
               const canDelete = role === 'admin' || role === 'manager' || (canShareMaterials && m.uploadedBy === userName);
               return (
-                <div key={m.id} className="material-item-row glass-panel local-material">
+                <div key={m.id} className="material-item-row glass-panel">
                   <div className="material-info">
-                    {getMaterialIcon(m.fileType)}
+                    {getMaterialIcon(m.type)}
                     <div className="material-title-group">
                       <span className="material-title">{m.title}</span>
-                      <span className="material-filename">{m.fileName}</span>
-                      <span className="material-uploader">Người tải lên: {m.uploadedBy || 'Chưa rõ'}</span>
+                      <span className="material-uploader">Người tải lên: {m.uploadedBy || 'Hệ thống'}</span>
                     </div>
-                    <span className="material-size">{m.fileSize}</span>
+                    {m.size && <span className="material-size">{m.size}</span>}
                   </div>
                   <div className="material-actions">
-                    <button 
-                      className="download-btn-icon" 
-                      title="Tải xuống"
-                      onClick={() => handleDownloadLocal(m)}
-                    >
-                      <Download size={14} />
-                    </button>
-                    {canDelete && (
+                    {m.url && m.url !== '#' ? (
+                      <a 
+                        href={`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}${m.url}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="download-btn-icon"
+                        title="Tải xuống"
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <Download size={14} />
+                      </a>
+                    ) : (
+                      <button 
+                        className="download-btn-icon" 
+                        title="Tải xuống"
+                        onClick={() => handleDownloadMock(m.title, m.type)}
+                      >
+                        <Download size={14} />
+                      </button>
+                    )}
+                    {canDelete && m.url && m.url !== '#' && (
                       <button 
                         className="delete-btn-icon text-danger" 
                         title="Xóa tài liệu"
-                        onClick={() => handleDeleteLocalMaterial(m.id)}
+                        onClick={() => handleDeleteMaterial(m.id, false)}
                       >
                         <Trash2 size={14} />
                       </button>
@@ -344,7 +403,7 @@ export const CoursesPage: React.FC = () => {
               );
             })}
 
-            {selectedCourse.materials.length === 0 && localMaterials.length === 0 && (
+            {selectedCourse.materials.length === 0 && (
               <div className="no-materials">Chưa có tài liệu nào trong khóa học này.</div>
             )}
           </div>
@@ -432,15 +491,15 @@ export const CoursesPage: React.FC = () => {
                 </div>
 
                 <div className="modal-actions-footer">
-                  <button type="button" className="cancel-btn" onClick={closeModal}>
+                  <button type="button" className="cancel-btn" onClick={closeModal} disabled={isUploading}>
                     Hủy bỏ
                   </button>
                   <button 
                     type="submit" 
                     className="submit-btn" 
-                    disabled={!selectedFile || !uploadTitle.trim()}
+                    disabled={!selectedFile || !uploadTitle.trim() || isUploading}
                   >
-                    Bắt đầu tải lên
+                    {isUploading ? 'Đang tải lên...' : 'Bắt đầu tải lên'}
                   </button>
                 </div>
               </form>
@@ -569,17 +628,20 @@ export const CoursesPage: React.FC = () => {
                   <span className="material-size">{m.fileSize}</span>
                 </div>
                 <div className="material-actions">
-                  <button 
-                    className="download-btn-icon" 
+                  <a 
+                    href={`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}${m.filePath}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="download-btn-icon"
                     title="Tải xuống"
-                    onClick={() => handleDownloadLocal(m)}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   >
                     <Download size={14} />
-                  </button>
+                  </a>
                   <button 
                     className="delete-btn-icon text-danger" 
                     title="Xóa tài liệu"
-                    onClick={() => handleDeleteLocalMaterial(m.id, true)}
+                    onClick={() => handleDeleteMaterial(m.id, true)}
                   >
                     <Trash2 size={14} />
                   </button>
@@ -597,12 +659,12 @@ export const CoursesPage: React.FC = () => {
       )}
 
       {/* Modal Tải lên tài liệu cho Tab Cá Nhân */}
-      {showUploadModal && activeTab === 'personal' && (
+      {showUploadModal && activeTab === 'personal' && createPortal(
         <div className="modal-overlay animate-fade-in" onClick={closeModal}>
           <div className="modal-content glass-panel animate-scale-in" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Tải lên tài liệu cá nhân</h3>
-              <button className="close-btn-icon" onClick={closeModal} title="Đóng">
+              <button className="close-btn-icon" onClick={closeModal} title="Đóng" disabled={isUploading}>
                 <X size={18} />
               </button>
             </div>
@@ -616,6 +678,7 @@ export const CoursesPage: React.FC = () => {
                   value={uploadTitle}
                   onChange={e => setUploadTitle(e.target.value)}
                   required
+                  disabled={isUploading}
                 />
               </div>
 
@@ -625,6 +688,7 @@ export const CoursesPage: React.FC = () => {
                   id="material-type"
                   value={uploadType}
                   onChange={e => setUploadType(e.target.value as any)}
+                  disabled={isUploading}
                 >
                   <option value="pdf">Tài liệu PDF (.pdf)</option>
                   <option value="slide">Bài giảng PowerPoint (.ppt, .pptx)</option>
@@ -634,12 +698,12 @@ export const CoursesPage: React.FC = () => {
               </div>
 
               <div 
-                className={`drag-drop-zone ${dragActive ? 'drag-active' : ''} ${selectedFile ? 'has-file' : ''}`}
-                onDragEnter={handleDrag}
-                onDragOver={handleDrag}
-                onDragLeave={handleDrag}
-                onDrop={handleDrop}
-                onClick={triggerFileInput}
+                className={`drag-drop-zone ${dragActive ? 'drag-active' : ''} ${selectedFile ? 'has-file' : ''} ${isUploading ? 'disabled' : ''}`}
+                onDragEnter={isUploading ? undefined : handleDrag}
+                onDragOver={isUploading ? undefined : handleDrag}
+                onDragLeave={isUploading ? undefined : handleDrag}
+                onDrop={isUploading ? undefined : handleDrop}
+                onClick={isUploading ? undefined : triggerFileInput}
               >
                 <input
                   ref={fileInputRef}
@@ -647,6 +711,7 @@ export const CoursesPage: React.FC = () => {
                   className="file-input-hidden"
                   onChange={handleFileChange}
                   accept=".pdf,.ppt,.pptx,.odp,.mp4,.webm,.avi,.mov,.png,.jpg,.jpeg,.gif,.svg,.webp"
+                  disabled={isUploading}
                 />
                 
                 {selectedFile ? (
@@ -656,17 +721,19 @@ export const CoursesPage: React.FC = () => {
                       <p className="file-name">{selectedFile.name}</p>
                       <p className="file-size">{formatFileSize(selectedFile.size)}</p>
                     </div>
-                    <button 
-                      type="button" 
-                      className="remove-file-btn" 
-                      title="Hủy chọn tệp"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedFile(null);
-                      }}
-                    >
-                      <X size={14} />
-                    </button>
+                    {!isUploading && (
+                      <button 
+                        type="button" 
+                        className="remove-file-btn" 
+                        title="Hủy chọn tệp"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedFile(null);
+                        }}
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <div className="drag-drop-prompt">
@@ -678,20 +745,21 @@ export const CoursesPage: React.FC = () => {
               </div>
 
               <div className="modal-actions-footer">
-                <button type="button" className="cancel-btn" onClick={closeModal}>
+                <button type="button" className="cancel-btn" onClick={closeModal} disabled={isUploading}>
                   Hủy bỏ
                 </button>
                 <button 
                   type="submit" 
                   className="submit-btn" 
-                  disabled={!selectedFile || !uploadTitle.trim()}
+                  disabled={!selectedFile || !uploadTitle.trim() || isUploading}
                 >
-                  Bắt đầu tải lên
+                  {isUploading ? 'Đang tải lên...' : 'Bắt đầu tải lên'}
                 </button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useClass } from '../../context/ClassContext';
+import { useMeeting } from '../../context/MeetingContext';
+import { useAuth } from '../../context/AuthContext';
 import { MessageSquare, Users, Send, Download, X, CheckCircle, Clock } from 'lucide-react';
 import './SidePanel.css';
 
@@ -13,13 +14,15 @@ export const SidePanel: React.FC = () => {
     sendMessage,
     setActiveTab,
     togglePanel,
-    role,
     isBreakoutActive,
     breakoutTimeLeft,
     breakoutRoomsCount,
     startBreakout,
     stopBreakout,
-  } = useClass();
+  } = useMeeting();
+
+  const { user } = useAuth();
+  const role = user?.role || 'student';
 
   const [inputVal, setInputVal] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -45,7 +48,7 @@ export const SidePanel: React.FC = () => {
   // Export Attendance CSV
   const handleExportCSV = () => {
     const headers = ['Họ và Tên', 'Vai Trò', 'Thời gian tham gia', 'Thời gian có mặt (giây)', 'Trạng thái điểm danh'];
-    const rows = participants.map(p => {
+    const rows = participants.map((p: any) => {
       const attendanceStatus = p.role === 'teacher' 
         ? 'Giáo viên' 
         : p.activeTimeSeconds > 120 
@@ -82,7 +85,7 @@ export const SidePanel: React.FC = () => {
 
   const isTeacherOrAdmin = role === 'teacher' || role === 'manager' || role === 'admin';
 
-  const renderParticipantRow = (p: typeof participants[0]) => {
+  const renderParticipantRow = (p: any) => {
     const minutes = Math.floor(p.activeTimeSeconds / 60);
     const seconds = p.activeTimeSeconds % 60;
     const isTeacherRole = p.role === 'teacher';
@@ -159,16 +162,16 @@ export const SidePanel: React.FC = () => {
     if (!isBreakoutActive) {
       return (
         <div className="participant-list">
-          {participants.map(p => renderParticipantRow(p))}
+          {participants.map((p: any) => renderParticipantRow(p))}
         </div>
       );
     }
 
-    const teacher = participants.find(p => p.role === 'teacher');
-    const students = participants.filter(p => p.role === 'student');
+    const teacher = participants.find((p: any) => p.role === 'teacher');
+    const students = participants.filter((p: any) => p.role === 'student');
 
-    const groups: typeof participants[] = Array.from({ length: breakoutRoomsCount }, () => []);
-    students.forEach((s, idx) => {
+    const groups: any[][] = Array.from({ length: breakoutRoomsCount }, () => []);
+    students.forEach((s: any, idx: number) => {
       groups[idx % breakoutRoomsCount].push(s);
     });
 
@@ -187,7 +190,7 @@ export const SidePanel: React.FC = () => {
               PHÒNG THẢO LUẬN NHÓM {grpIdx + 1} ({grp.length} học viên)
             </h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-              {grp.map(s => renderParticipantRow(s))}
+              {grp.map((s: any) => renderParticipantRow(s))}
               {grp.length === 0 && (
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic', padding: '0.25rem 0' }}>Chưa xếp học sinh</div>
               )}
@@ -245,7 +248,7 @@ export const SidePanel: React.FC = () => {
           /* Chat Section */
           <div className="chat-container">
             <div className="messages-list">
-              {chatMessages.map(msg => {
+              {chatMessages.map((msg: any) => {
                 const isMe = msg.senderId === 'local-user';
                 return (
                   <div key={msg.id} className={`message-item ${isMe ? 'message-me' : 'message-other'}`}>
@@ -371,8 +374,8 @@ export const SidePanel: React.FC = () => {
               <div className="hand-raise-queue-alert">
                 <h4>Hàng đợi phát biểu ({raiseHandQueue.length})</h4>
                 <ol className="queue-list">
-                  {raiseHandQueue.map((id, index) => {
-                    const participant = participants.find(p => p.id === id);
+                  {raiseHandQueue.map((id: any, index: number) => {
+                    const participant = participants.find((p: any) => p.id === id);
                     return (
                       <li key={id} className="queue-item">
                         <span className="queue-index">#{index + 1}</span>

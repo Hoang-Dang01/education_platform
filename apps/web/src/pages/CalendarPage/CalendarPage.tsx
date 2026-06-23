@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useClass } from '../../context/ClassContext';
+import { createPortal } from 'react-dom';
+import { useAuth } from '../../context/AuthContext';
+import { useMeeting } from '../../context/MeetingContext';
 import {
   ChevronLeft, ChevronRight, Plus, Edit, Trash2, Clock,
   ArrowRight, CalendarDays, X
@@ -9,7 +11,10 @@ import type { ScheduledClass } from '../../lib/localDb';
 import './CalendarPage.css';
 
 export const CalendarPage: React.FC = () => {
-  const { role, userName, joinRoom } = useClass();
+  const { user } = useAuth();
+  const { joinSession } = useMeeting();
+  const role = user?.role || 'student';
+  const userName = user?.name || '';
   const [classes, setClasses] = useState<ScheduledClass[]>([]);
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -139,9 +144,21 @@ export const CalendarPage: React.FC = () => {
     } else {
       setEditClass(null);
       setSubject('');
-      setTime('08:00 - 09:30');
-      setDate(defaultDateStr || selectedDateStr);
-      setTeacher(role === 'teacher' ? (userName || 'Thầy Nguyễn Hải Nam') : 'Cô Lê Thu Thảo');
+      
+      const targetDate = defaultDateStr || selectedDateStr;
+      const todayStr = new Date().toISOString().split('T')[0];
+      if (targetDate === todayStr) {
+        const nextHour = new Date().getHours() + 1;
+        const startHour = nextHour < 24 ? nextHour : 8;
+        const endHour = startHour + 1;
+        const pad = (n: number) => String(n).padStart(2, '0');
+        setTime(`${pad(startHour)}:00 - ${pad(endHour % 24)}:30`);
+      } else {
+        setTime('08:00 - 09:30');
+      }
+      
+      setDate(targetDate);
+      setTeacher(role === 'teacher' ? (userName || '') : '');
       setRoom('phong-' + Math.floor(Math.random() * 900 + 100));
       setStatus('scheduled');
     }
@@ -160,6 +177,32 @@ export const CalendarPage: React.FC = () => {
       alert('Vui lòng điền đầy đủ thông tin lịch học');
       return;
     }
+
+    // Kiểm tra lịch học không được trong quá khứ
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    
+    if (date < todayStr) {
+      alert('Không thể tạo hoặc cập nhật lịch học trong quá khứ.');
+      return;
+    }
+    
+    if (date === todayStr) {
+      const timeMatch = time.match(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]/);
+      if (timeMatch) {
+        const startTimeStr = timeMatch[0];
+        const [hours, minutes] = startTimeStr.split(':').map(Number);
+        
+        const scheduleDateTime = new Date();
+        scheduleDateTime.setHours(hours, minutes, 0, 0);
+        
+        if (scheduleDateTime <= now) {
+          alert('Giờ bắt đầu của lịch học phải lớn hơn thời điểm hiện tại.');
+          return;
+        }
+      }
+    }
+
     const newCls: ScheduledClass = {
       id: editClass?.id || 'class-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
       subject,
@@ -290,7 +333,7 @@ export const CalendarPage: React.FC = () => {
               <div className="sidebar-class-card-actions">
                 {cls.status === 'live' ? (
                   <button
-                    onClick={() => joinRoom(cls.room, userName || 'Học viên', role)}
+                    onClick={() => joinSession(cls.id, userName || 'Học viên', role)}
                     className="sidebar-join-btn animate-pulse-light"
                   >
                     <span>Vào lớp học</span>
@@ -330,7 +373,7 @@ export const CalendarPage: React.FC = () => {
       </div>
 
       {/* Glassmorphism Schedule Modal Form */}
-      {isModalOpen && (
+      {isModalOpen && createPortal(
         <div className="custom-modal-overlay">
           <div className="custom-modal-content glass-panel animate-scale-up">
             <div className="modal-header">
@@ -357,6 +400,7 @@ export const CalendarPage: React.FC = () => {
                   <label>Ngày Học</label>
                   <input
                     type="date"
+                    min={new Date().toISOString().split('T')[0]}
                     value={date}
                     onChange={e => setDate(e.target.value)}
                     required
@@ -386,18 +430,7 @@ export const CalendarPage: React.FC = () => {
               </div>
 
               <div className="form-group">
-                <label>Mã Phòng Học (Jitsi Room Name)</label>
-                <input
-                  type="text"
-                  placeholder="Ví dụ: toan-tin-k12"
-                  value={room}
-                  onChange={e => setRoom(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Trạng Thế</label>
+                <label>Trạng Thái</label>
                 <select
                   value={status}
                   onChange={e => setStatus(e.target.value as 'live' | 'scheduled')}
@@ -417,7 +450,8 @@ export const CalendarPage: React.FC = () => {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

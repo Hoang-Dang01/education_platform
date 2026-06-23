@@ -224,3 +224,61 @@
   border-color: rgba(245, 158, 11, 0.6);
   box-shadow: 0 0 15px rgba(245, 158, 11, 0.25);
 }
+
+/* Fix overlapping input icons and text */
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.input-group label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: left;
+}
+
+.input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.input-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  width: 18px;
+  height: 18px;
+  pointer-events: none;
+  transition: color var(--transition-fast);
+  z-index: 5; /* Ensure icon stays on top of input background */
+}
+
+.input-wrapper input {
+  width: 100%;
+  padding: 0.875rem 1rem 0.875rem 2.75rem !important; /* Force left padding to prevent overlapping with icon */
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  outline: none;
+  transition: all var(--transition-fast);
+}
+
+.input-wrapper input:focus {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--color-primary-light);
+  box-shadow: 0 0 15px var(--color-primary-glow);
+}
+
+.input-wrapper input:focus + .input-icon {
+  color: var(--color-primary-light);
+  z-index: 5;
+}

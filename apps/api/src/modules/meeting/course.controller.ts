@@ -12,14 +12,83 @@ export class CourseController {
     const userId = req.user.id;
     const role = req.user.role;
 
+    const selectFields = {
+      id: true,
+      code: true,
+      name: true,
+      description: true,
+      status: true,
+      materials: {
+        where: {
+          isDeleted: false,
+        },
+        select: {
+          id: true,
+          title: true,
+          fileName: true,
+          fileType: true,
+          fileSize: true,
+          filePath: true,
+          isPrivate: true,
+          uploadedBy: {
+            select: {
+              name: true,
+            },
+          },
+          uploadedAt: true,
+        },
+      },
+      classes: {
+        select: {
+          id: true,
+          name: true,
+          teacher: {
+            select: {
+              name: true,
+            },
+          },
+          enrollments: {
+            select: {
+              id: true,
+            },
+          },
+          sessions: {
+            select: {
+              id: true,
+              status: true,
+            },
+          },
+        },
+      },
+    };
+
+    const mapCourses = (coursesList: any[]) => {
+      return coursesList.map(course => ({
+        ...course,
+        materials: (course.materials || []).map((m: any) => ({
+          id: m.id,
+          title: m.title,
+          fileName: m.fileName,
+          fileType: m.fileType,
+          fileSize: m.fileSize,
+          filePath: m.filePath,
+          isPrivate: m.isPrivate,
+          uploadedBy: m.uploadedBy?.name || 'Hệ thống',
+          uploadedAt: m.uploadedAt,
+        })),
+      }));
+    };
+
     if (role === 'admin' || role === 'manager') {
-      return this.prisma.course.findMany({
+      const list = await this.prisma.course.findMany({
+        select: selectFields,
         orderBy: { code: 'asc' },
       });
+      return mapCourses(list);
     }
 
     if (role === 'teacher') {
-      return this.prisma.course.findMany({
+      const list = await this.prisma.course.findMany({
         where: {
           classes: {
             some: {
@@ -27,12 +96,14 @@ export class CourseController {
             },
           },
         },
+        select: selectFields,
         orderBy: { code: 'asc' },
       });
+      return mapCourses(list);
     }
 
     // Students see courses they are enrolled in
-    return this.prisma.course.findMany({
+    const list = await this.prisma.course.findMany({
       where: {
         classes: {
           some: {
@@ -45,7 +116,9 @@ export class CourseController {
           },
         },
       },
+      select: selectFields,
       orderBy: { code: 'asc' },
     });
+    return mapCourses(list);
   }
 }

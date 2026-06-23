@@ -1,4 +1,5 @@
 :root {
+  color-scheme: dark;
   /* Colors */
   --bg-dark: #080b11;
   --bg-primary: #0e1322;
@@ -56,6 +57,7 @@
 }
 
 :root[data-theme="light"] {
+  color-scheme: light;
   /* Colors */
   --bg-dark: #f1f5f9;
   --bg-primary: #ffffff;

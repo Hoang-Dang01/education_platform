@@ -1,46 +1,45 @@
 import React, { useState } from 'react';
-import { useClass } from '../../context/ClassContext';
-import { BookOpen, Sparkles, User, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { BookOpen, Sparkles, User, Lock, ArrowRight, Eye, EyeOff, Loader2 } from 'lucide-react';
 import type { UserRole } from '../../lib/roles';
 import { roleLabel } from '../../lib/roles';
 import './LoginPage.css';
 
 export const LoginPage: React.FC = () => {
-  const { login } = useClass();
+  const { loginWithCredentials, error: authError, loading } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
 
-  // Nhận diện vai trò từ tên tài khoản (tạm thời — sẽ thay bằng API xác thực thật)
-  const detectRole = (input: string): UserRole => {
-    const u = input.toLowerCase();
-    if (u.includes('admin') || u.includes('quantri')) return 'admin';
-    if (u.includes('manager') || u.includes('quanly')) return 'manager';
-    if (u.includes('teacher') || u.includes('nam') || u.includes('giaovien')) return 'teacher';
-    return 'student';
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username.trim()) return;
+    if (!username.trim() || !password.trim()) return;
 
-    const finalRole = detectRole(username);
-    const dispName = finalRole === 'teacher' ? 'Thầy Nguyễn Hải Nam' : username;
-
-    login(dispName, finalRole);
+    setLocalError(null);
+    try {
+      await loginWithCredentials(username.trim(), password);
+    } catch (err: any) {
+      setLocalError(err.message || 'Đăng nhập không thành công.');
+    }
   };
 
-  // Tên hiển thị mẫu cho từng vai trò khi đăng nhập nhanh (thử nghiệm)
-  const QUICK_LOGIN_NAMES: Record<UserRole, string> = {
-    admin: 'Quản trị viên Hệ thống',
-    manager: 'Cô Trần Điều Phối',
-    teacher: 'Thầy Nguyễn Hải Nam',
-    student: 'Nguyễn Đăng',
+  // Seeded credentials for Quick Login
+  const QUICK_CREDENTIALS: Record<UserRole, { username: string; pass: string }> = {
+    admin: { username: 'admin', pass: 'admin123' },
+    manager: { username: 'manager', pass: 'manager123' },
+    teacher: { username: 'namnh', pass: 'teacher123' },
+    student: { username: 'dangn4821', pass: 'student123' },
   };
 
-  // Quick testing logs autofill & submit
-  const handleQuickLogin = (roleType: UserRole) => {
-    login(QUICK_LOGIN_NAMES[roleType], roleType);
+  const handleQuickLogin = async (roleType: UserRole) => {
+    setLocalError(null);
+    const creds = QUICK_CREDENTIALS[roleType];
+    try {
+      await loginWithCredentials(creds.username, creds.pass);
+    } catch (err: any) {
+      setLocalError(err.message || `Lỗi đăng nhập nhanh với vai trò ${roleLabel(roleType)}.`);
+    }
   };
 
   return (
@@ -67,17 +66,25 @@ export const LoginPage: React.FC = () => {
             <p>Nhập thông tin tài khoản của bạn để vào cổng học tập trực tuyến</p>
           </div>
 
+          {/* Error Banner */}
+          {(localError || authError) && (
+            <div className="error-banner" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444', padding: '0.75rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.875rem', textAlign: 'center', fontFamily: 'var(--font-primary, sans-serif)' }}>
+              {localError || authError}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="login-form">
             <div className="input-group">
-              <label htmlFor="username">Tên tài khoản hoặc Email</label>
+              <label htmlFor="username">Tên đăng nhập (Username)</label>
               <div className="input-wrapper">
                 <User className="input-icon" />
                 <input
                   id="username"
                   type="text"
-                  placeholder="Ví dụ: student@edumeet.com..."
+                  placeholder="Ví dụ: dangn4821..."
                   value={username}
                   onChange={e => setUsername(e.target.value)}
+                  disabled={loading}
                   required
                 />
               </div>
@@ -93,12 +100,14 @@ export const LoginPage: React.FC = () => {
                   placeholder="Nhập mật khẩu..."
                   value={password}
                   onChange={e => setPassword(e.target.value)}
+                  disabled={loading}
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(prev => !prev)}
                   className="password-toggle-btn"
+                  disabled={loading}
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -107,15 +116,24 @@ export const LoginPage: React.FC = () => {
 
             <div className="form-options">
               <label className="remember-me">
-                <input type="checkbox" />
+                <input type="checkbox" disabled={loading} />
                 <span>Ghi nhớ tôi</span>
               </label>
               <a href="#" className="forgot-password">Quên mật khẩu?</a>
             </div>
 
-            <button type="submit" className="login-submit-btn">
-              <span>Đăng nhập</span>
-              <ArrowRight size={16} />
+            <button type="submit" className="login-submit-btn" disabled={loading}>
+              {loading ? (
+                <>
+                  <span>Đang đăng nhập...</span>
+                  <Loader2 className="animate-spin" size={16} />
+                </>
+              ) : (
+                <>
+                  <span>Đăng nhập</span>
+                  <ArrowRight size={16} />
+                </>
+              )}
             </button>
           </form>
 

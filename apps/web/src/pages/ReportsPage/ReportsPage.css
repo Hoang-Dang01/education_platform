@@ -209,8 +209,8 @@
   width: 100%;
   padding: 0.6rem 1rem 0.6rem 2.35rem;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--glass-border);
+  background: var(--bg-secondary);
   color: var(--text-primary);
   font-family: var(--font-body);
   font-size: 0.85rem;
@@ -218,9 +218,14 @@
   transition: all var(--transition-fast);
 }
 
+.filter-search-input::placeholder {
+  color: var(--text-muted);
+}
+
 .filter-search-input:focus {
   border-color: var(--color-cyan-light);
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--bg-secondary);
+  box-shadow: 0 0 8px var(--color-cyan-glow);
 }
 
 .date-picker-group {
@@ -235,8 +240,14 @@
   gap: 0.4rem;
   padding: 0.5rem 0.75rem;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--glass-border);
+  background: var(--bg-secondary);
+  transition: all var(--transition-fast);
+}
+
+.date-input-container:focus-within {
+  border-color: var(--color-cyan-light);
+  box-shadow: 0 0 8px var(--color-cyan-glow);
 }
 
 .date-input-container input {
@@ -259,8 +270,14 @@
   gap: 0.4rem;
   padding: 0.5rem 0.75rem;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--glass-border);
+  background: var(--bg-secondary);
+  transition: all var(--transition-fast);
+}
+
+.select-filter-container:focus-within {
+  border-color: var(--color-cyan-light);
+  box-shadow: 0 0 8px var(--color-cyan-glow);
 }
 
 .select-filter-container select {
@@ -271,6 +288,11 @@
   font-size: 0.8rem;
   outline: none;
   cursor: pointer;
+}
+
+.select-filter-container select option {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
 }
 
 .scheduler-toggle-btn {

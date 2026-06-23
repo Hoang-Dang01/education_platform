@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useClass } from '../../context/ClassContext';
+import { useAuth } from '../../context/AuthContext';
+import { useMeeting } from '../../context/MeetingContext';
 import { Video, VideoOff, Mic, MicOff, BookOpen, User, Sparkles, LogIn, Shield, Briefcase } from 'lucide-react';
 import type { UserRole } from '../../lib/roles';
 import { ROLE_META } from '../../lib/roles';
@@ -14,7 +15,10 @@ const ROLE_ICONS: Record<UserRole, React.ReactNode> = {
 };
 
 export const WelcomeScreen: React.FC = () => {
-  const { joinRoom, role: authRole } = useClass();
+  const { joinSession } = useMeeting();
+  const { user } = useAuth();
+  const authRole = user?.role || 'student';
+  
   const [name, setName] = useState('');
   const [room, setRoom] = useState('');
   // Mặc định theo vai trò đã đăng nhập, nhưng vẫn cho phép đổi trước khi vào lớp
@@ -66,7 +70,7 @@ export const WelcomeScreen: React.FC = () => {
       stream.getTracks().forEach(track => track.stop());
     }
     
-    joinRoom(room.trim(), name.trim(), role);
+    joinSession(room.trim(), name.trim(), role);
   };
 
   return (

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useClass } from '../../context/ClassContext';
+import { useMeeting } from '../../context/MeetingContext';
+import { useAuth } from '../../context/AuthContext';
 import {
   Mic,
   MicOff,
@@ -28,7 +29,6 @@ export const ControlBar: React.FC = () => {
     chatOpen,
     panelOpen,
     activeTab,
-    role,
     toggleAudio,
     toggleVideo,
     requestScreenShare,
@@ -36,14 +36,17 @@ export const ControlBar: React.FC = () => {
     toggleChat,
     togglePanel,
     setActiveTab,
-    leaveRoom,
+    leaveSession: leaveRoom,
     raiseHandQueue,
     participants,
     screenSharingUserId,
     screenStream,
     roomName,
-    userName,
-  } = useClass();
+  } = useMeeting();
+
+  const { user } = useAuth();
+  const role = user?.role || 'student';
+  const userName = user?.name || '';
 
   // Recording states
   const [isRecording, setIsRecording] = useState(false);
