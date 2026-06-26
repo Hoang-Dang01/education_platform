@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RoomServiceClient, AccessToken } from 'livekit-server-sdk';
+import { UserRole } from '@prisma/client';
 
 @Injectable()
 export class LivekitService {
@@ -29,6 +30,7 @@ export class LivekitService {
     participantIdentity: string,
     participantName: string,
     isTeacher: boolean,
+    role?: UserRole,
   ): Promise<string> {
     const apiKey = this.configService.get<string>('LIVEKIT_API_KEY');
     const apiSecret = this.configService.get<string>('LIVEKIT_API_SECRET');
@@ -41,6 +43,10 @@ export class LivekitService {
       identity: participantIdentity,
       name: participantName,
       ttl: '4h', // Token is valid for 4 hours
+      metadata: JSON.stringify({
+        role: role || (isTeacher ? 'teacher' : 'student'),
+        name: participantName,
+      }),
     });
 
     // Grant correct permissions

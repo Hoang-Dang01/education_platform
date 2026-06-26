@@ -12,34 +12,46 @@ import type { MediaClient, MediaClientCallbacks, MediaTrack } from './media-clie
 
 class LiveKitTrackAdapter implements MediaTrack {
   private lkTrack: any;
-  constructor(lkTrack: any) {
+  private customIsLocal: boolean;
+  private participantId: string;
+  private customSource?: string;
+
+  constructor(lkTrack: any, isLocal: boolean, participantId: string, source?: string) {
     this.lkTrack = lkTrack;
+    this.customIsLocal = isLocal;
+    this.participantId = participantId;
+    this.customSource = source;
   }
 
   getType(): 'audio' | 'video' {
-    return this.lkTrack.kind === 'video' ? 'video' : 'audio';
+    return this.lkTrack?.kind === 'video' ? 'video' : 'audio';
   }
 
   isLocal(): boolean {
-    return this.lkTrack.isLocal ?? false;
+    return this.customIsLocal;
   }
 
   getParticipantId(): string {
-    return this.lkTrack.participantIdentity || '';
+    return this.participantId;
   }
 
   getVideoType?(): 'camera' | 'desktop' {
-    return this.lkTrack.source === 'screen_share' ? 'desktop' : 'camera';
+    const src = this.customSource || this.lkTrack?.source;
+    return src === 'screen_share' || src === 'desktop' ? 'desktop' : 'camera';
   }
 
   attach(element: any): void {
-    if (this.lkTrack.attach) {
+    if (this.lkTrack && typeof this.lkTrack.attach === 'function') {
+      console.log(`[LiveKitTrackAdapter] Attaching track ${this.lkTrack.kind} (${this.getVideoType?.()}) to element`);
       this.lkTrack.attach(element);
+    } else {
+      console.warn('[LiveKitTrackAdapter] Cannot attach track: attach method is missing');
     }
   }
 
   detach(element: any): void {
-    if (this.lkTrack.detach) {
+    if (this.lkTrack && typeof this.lkTrack.detach === 'function') {
+      console.log(`[LiveKitTrackAdapter] Detaching track ${this.lkTrack.kind}`);
       this.lkTrack.detach(element);
     }
   }
@@ -63,6 +75,23 @@ export class LiveKitClient implements MediaClient {
    */
   private getRoomPing(): number {
     return (this.room as any)?.ping ?? 30;
+  }
+
+  /**
+   * Safely parses participant metadata.
+   */
+  private getParticipantMeta(participant: RemoteParticipant): { role: string; name?: string } {
+    if (!participant || !participant.metadata) return { role: 'student' };
+    try {
+      const parsed = JSON.parse(participant.metadata);
+      return {
+        role: parsed.role ?? 'student',
+        name: parsed.name
+      };
+    } catch (e) {
+      console.warn('[LiveKitClient] Failed to parse participant metadata:', e);
+      return { role: 'student' };
+    }
   }
 
   public connect(
@@ -93,33 +122,49 @@ export class LiveKitClient implements MediaClient {
         console.log('[LiveKitClient] Connected to LiveKit Room:', roomName);
         callbacks.onConferenceJoined();
 
+        // Sync existing remote participants
+        room.remoteParticipants.forEach((participant) => {
+          console.log('[LiveKitClient] Syncing existing participant:', participant.identity);
+          const meta = this.getParticipantMeta(participant);
+          callbacks?.onParticipantJoined?.(
+            participant.identity,
+            participant.name || meta.name || 'Người dùng LiveKit',
+            meta.role as any
+          );
+        });
+
         // Publish local camera and mic tracks
         room.localParticipant.enableCameraAndMicrophone()
           .then(() => {
+            console.log('[LiveKitClient] Local camera and microphone enabled successfully.');
             const tracks: any[] = [];
             (room.localParticipant as any).videoTracks.forEach((pub: any) => {
               if (pub.track) {
-                tracks.push(new LiveKitTrackAdapter({
-                  ...pub.track,
-                  isLocal: true,
-                  participantIdentity: room.localParticipant.identity
-                }));
+                console.log('[LiveKitClient] Packaging local video track:', pub.track.sid);
+                tracks.push(new LiveKitTrackAdapter(
+                  pub.track,
+                  true,
+                  'local-user',
+                  pub.source
+                ));
               }
             });
             (room.localParticipant as any).audioTracks.forEach((pub: any) => {
               if (pub.track) {
-                tracks.push(new LiveKitTrackAdapter({
-                  ...pub.track,
-                  isLocal: true,
-                  participantIdentity: room.localParticipant.identity
-                }));
+                console.log('[LiveKitClient] Packaging local audio track:', pub.track.sid);
+                tracks.push(new LiveKitTrackAdapter(
+                  pub.track,
+                  true,
+                  'local-user',
+                  pub.source
+                ));
               }
             });
             callbacks.onLocalTracksReady(tracks);
           })
           .catch(err => {
-            console.error('[LiveKitClient] Error enabling camera/mic:', err);
-            callbacks.onConnectionFailed(err.toString());
+            console.warn('[LiveKitClient] Camera or microphone not available, joining as listener only:', err);
+            callbacks.onLocalTracksReady([]);
           });
 
         // Setup real-time WebRTC stats aggregator
@@ -161,7 +206,7 @@ export class LiveKitClient implements MediaClient {
         }
 
         // Report stats for local participant
-        this.callbacks?.onConnectionStatsReceived(room.localParticipant.identity, {
+        this.callbacks?.onConnectionStatsReceived('local-user', {
           latency: ping,
           packetLoss: totalLoss,
           jitter: Math.round(jitter),
@@ -198,10 +243,11 @@ export class LiveKitClient implements MediaClient {
   private setupRoomListeners(room: Room) {
     room.on(RoomEvent.ParticipantConnected, (participant: RemoteParticipant) => {
       console.log('[LiveKitClient] Participant connected:', participant.identity);
-      this.callbacks?.onParticipantJoined(
+      const meta = this.getParticipantMeta(participant);
+      this.callbacks?.onParticipantJoined?.(
         participant.identity,
-        participant.name || 'Người dùng LiveKit',
-        'student'
+        participant.name || meta.name || 'Người dùng LiveKit',
+        meta.role as any
       );
     });
 
@@ -212,48 +258,64 @@ export class LiveKitClient implements MediaClient {
 
     room.on(RoomEvent.TrackSubscribed, (track: RemoteTrack, publication: RemoteTrackPublication, participant: RemoteParticipant) => {
       console.log('[LiveKitClient] Track subscribed:', track.kind, 'from', participant.identity);
-      const adaptedTrack = new LiveKitTrackAdapter({
-        ...track,
-        participantIdentity: participant.identity,
-        source: publication.source
-      });
+      
+      // Ensure participant exists with correct metadata before track is added
+      const meta = this.getParticipantMeta(participant);
+      this.callbacks?.onParticipantJoined?.(
+        participant.identity,
+        participant.name || meta.name || 'Người dùng LiveKit',
+        meta.role as any
+      );
+
+      const adaptedTrack = new LiveKitTrackAdapter(
+        track,
+        false,
+        participant.identity,
+        publication.source
+      );
       this.callbacks?.onTrackAdded(adaptedTrack);
     });
 
     room.on(RoomEvent.TrackUnsubscribed, (track: RemoteTrack, publication: RemoteTrackPublication, participant: RemoteParticipant) => {
       console.log('[LiveKitClient] Track unsubscribed:', track.kind, 'from', participant.identity);
-      const adaptedTrack = new LiveKitTrackAdapter({
-        ...track,
-        participantIdentity: participant.identity,
-        source: publication.source
-      });
+      const adaptedTrack = new LiveKitTrackAdapter(
+        track,
+        false,
+        participant.identity,
+        publication.source
+      );
       this.callbacks?.onTrackRemoved(adaptedTrack);
     });
 
     // Handle local publication updates to prevent ghost videos
     room.on(RoomEvent.LocalTrackPublished, (publication: TrackPublication, participant: LocalParticipant) => {
       if (publication.track) {
-        const adaptedTrack = new LiveKitTrackAdapter({
-          ...publication.track,
-          isLocal: true,
-          participantIdentity: participant.identity
-        });
+        console.log('[LiveKitClient] Local track published:', publication.track.kind);
+        const adaptedTrack = new LiveKitTrackAdapter(
+          publication.track,
+          true,
+          'local-user',
+          publication.source
+        );
         this.callbacks?.onTrackAdded(adaptedTrack);
       }
     });
 
     room.on(RoomEvent.LocalTrackUnpublished, (publication: TrackPublication, participant: LocalParticipant) => {
-      const adaptedTrack = new LiveKitTrackAdapter({
-        ...publication.track,
-        isLocal: true,
-        participantIdentity: participant.identity
-      });
+      console.log('[LiveKitClient] Local track unpublished:', publication.kind);
+      const adaptedTrack = new LiveKitTrackAdapter(
+        publication.track,
+        true,
+        'local-user',
+        publication.source
+      );
       this.callbacks?.onTrackRemoved(adaptedTrack);
     });
 
     room.on(RoomEvent.ActiveSpeakersChanged, (speakers) => {
       if (speakers.length > 0) {
-        this.callbacks?.onDominantSpeakerChanged(speakers[0].identity);
+        const activeId = speakers[0].isLocal ? 'local-user' : speakers[0].identity;
+        this.callbacks?.onDominantSpeakerChanged(activeId);
       }
     });
 
@@ -292,7 +354,7 @@ export class LiveKitClient implements MediaClient {
             new Date()
           );
         } else if (data.action === 'lowerHand' && data.targetId === room.localParticipant.identity) {
-          this.callbacks?.onHandRaiseChanged(room.localParticipant.identity, false);
+          this.callbacks?.onHandRaiseChanged('local-user', false);
         }
       } catch (err) {
         console.error('[LiveKitClient] Error parsing data channel message:', err);
@@ -329,7 +391,7 @@ export class LiveKitClient implements MediaClient {
       this.room.localParticipant.publishData(encoder.encode(payload), { reliable: true })
         .catch(err => console.error('[LiveKitClient] Error publishing hand raise:', err));
       
-      this.callbacks?.onHandRaiseChanged(this.room.localParticipant.identity, isRaised);
+      this.callbacks?.onHandRaiseChanged('local-user', isRaised);
     }
   }
 
@@ -358,11 +420,13 @@ export class LiveKitClient implements MediaClient {
       if (!publication || !publication.track) {
         throw new Error('Không thể khởi tạo track chia sẻ màn hình.');
       }
-      return new LiveKitTrackAdapter({
-        ...publication.track,
-        participantIdentity: this.room.localParticipant.identity,
-        source: 'screen_share'
-      });
+      console.log('[LiveKitClient] Screen share started successfully. Packaging track.');
+      return new LiveKitTrackAdapter(
+        publication.track,
+        true,
+        this.room.localParticipant.identity,
+        'screen_share'
+      );
     } catch (err) {
       console.error('[LiveKitClient] Error starting screen share:', err);
       throw err;

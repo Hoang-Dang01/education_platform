@@ -184,13 +184,13 @@
   width: 280px;
   z-index: 998;
   border-radius: 16px;
-  background: rgba(15, 23, 42, 0.85); /* Darker backdrop */
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   padding: 1.25rem;
-  color: #ffffff;
+  color: var(--text-primary);
   animation: slide-up-fade 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -199,14 +199,14 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--border);
   padding-bottom: 0.5rem;
 }
 .simulation-card-header h3 {
   margin: 0;
   font-size: 0.9rem;
   font-weight: 700;
-  color: #e2e8f0;
+  color: var(--text-primary);
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -214,18 +214,18 @@
 .close-debug-card-btn {
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-secondary);
   cursor: pointer;
   padding: 2px;
   display: flex;
 }
 .close-debug-card-btn:hover {
-  color: #ffffff;
+  color: var(--text-primary);
 }
 
 .simulation-description {
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--text-secondary);
   margin: 0 0 1rem 0;
   line-height: 1.4;
 }
@@ -242,9 +242,9 @@
   justify-content: space-between;
   padding: 0.6rem 0.85rem;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.8);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
   font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
@@ -252,20 +252,20 @@
   transition: all 0.2s ease;
 }
 .sim-mode-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
+  background: var(--surface-elevated);
+  color: var(--text-primary);
   transform: translateX(4px);
 }
 .sim-mode-btn.active {
-  background: rgba(59, 130, 246, 0.2);
-  border-color: #3b82f6;
-  color: #60a5fa;
-  box-shadow: inset 0 0 10px rgba(59, 130, 246, 0.1);
+  background: var(--color-primary-glow);
+  border-color: var(--color-primary);
+  color: var(--color-primary-light);
+  box-shadow: inset 0 0 10px var(--color-primary-glow);
 }
 .sim-mode-btn.active::after {
   content: '●';
   font-size: 8px;
-  color: #3b82f6;
+  color: var(--color-primary-light);
   animation: pulse-glow-dot 1.5s infinite;
 }
 

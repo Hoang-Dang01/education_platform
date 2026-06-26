@@ -32,5 +32,4 @@ rtc:
   port_range_end: 50200
 
   # Fallback to TCP connection if UDP is blocked by firewalls
-  use_tcp: true
   tcp_port: 7881

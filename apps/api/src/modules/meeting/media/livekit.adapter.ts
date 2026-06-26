@@ -20,6 +20,7 @@ export class LivekitAdapter implements MediaProvider {
       user.id,
       user.name,
       user.isTeacher,
+      user.role,
     );
   }
 }

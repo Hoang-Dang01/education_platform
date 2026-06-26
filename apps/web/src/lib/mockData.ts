@@ -59,61 +59,10 @@ export const getMockParticipants = (localUserName: string, localUserRole: UserRo
     latency: 28, packetLoss: 0.2, jitter: 4, bitrate: 1650, framerate: 30,
   };
 
-  const list: MockParticipant[] = [localUser];
-
-  // Luôn có giáo viên chủ phòng — TRỪ khi chính người dùng là giáo viên (tránh trùng).
-  // Sửa lỗi: trước đây chỉ thêm khi là Học viên nên Quản lý/Admin vào giám sát bị thiếu GV.
-  if (localUserRole !== 'teacher') {
-    list.push({
-      id: 'teacher-1', name: 'Thầy Nguyễn Hải Nam', role: 'teacher',
-      isLocal: false, isAudioMuted: false, isVideoMuted: false, isHandRaised: false,
-      connectionQuality: 'excellent', joinedAt: new Date(Date.now() - 300000), activeTimeSeconds: 300,
-      device: 'desktop', network: 'ethernet', networkLabel: 'Mạng dây',
-      latency: 22, packetLoss: 0, jitter: 3, bitrate: 1850, framerate: 30,
-    });
-  }
-
-  // Danh sách học sinh cùng lớp + telemetry/thiết bị mẫu (1 em mạng yếu để demo cảnh báo)
-  const classmates: Array<{ name: string; device: DeviceType; network: NetworkType; networkLabel: string; latency: number; packetLoss: number; jitter: number; quality: MockParticipant['connectionQuality'] }> = [
-    { name: 'Trần Minh Tâm', device: 'laptop', network: 'wifi', networkLabel: 'Wi-Fi', latency: 45, packetLoss: 0.3, jitter: 6, quality: 'excellent' },
-    { name: 'Lê Thị Hoa', device: 'mobile', network: 'mobile', networkLabel: 'Mạng di động (4g)', latency: 95, packetLoss: 1.2, jitter: 14, quality: 'good' },
-    { name: 'Phạm Quốc Bảo', device: 'desktop', network: 'wifi', networkLabel: 'Wi-Fi', latency: 60, packetLoss: 0.5, jitter: 8, quality: 'excellent' },
-    { name: 'Nguyễn Thu Thảo', device: 'mobile', network: 'mobile', networkLabel: 'Mạng di động (3g)', latency: 185, packetLoss: 4.2, jitter: 24, quality: 'poor' },
-    { name: 'Hoàng Gia Huy', device: 'tablet', network: 'wifi', networkLabel: 'Wi-Fi', latency: 70, packetLoss: 0.8, jitter: 10, quality: 'good' },
-  ];
-  classmates.forEach((s, idx) => {
-    list.push({
-      id: `student-${idx}`, name: s.name, role: 'student', isLocal: false,
-      isAudioMuted: idx !== 3, isVideoMuted: idx === 0 || idx === 3,
-      isHandRaised: idx === 1, handRaiseTime: idx === 1 ? Date.now() - 10000 : undefined,
-      connectionQuality: s.quality, joinedAt: new Date(Date.now() - (idx + 1) * 60000), activeTimeSeconds: (idx + 1) * 60,
-      device: s.device, network: s.network, networkLabel: s.networkLabel,
-      latency: s.latency, packetLoss: s.packetLoss, jitter: s.jitter,
-      bitrate: 1200 + idx * 80, framerate: s.quality === 'poor' ? 18 : 30,
-    });
-  });
-
-  return list;
+  return [localUser];
 };
 
-export const getInitialChatMessages = (): MockChatMessage[] => [
-  {
-    id: 'm1',
-    senderId: 'teacher-1',
-    senderName: 'Thầy Nguyễn Hải Nam',
-    senderRole: 'teacher',
-    text: 'Chào cả lớp, các em đã chuẩn bị bài tập về nhà hôm nay chưa?',
-    timestamp: new Date(Date.now() - 200000),
-  },
-  {
-    id: 'm2',
-    senderId: 'student-0',
-    senderName: 'Trần Minh Tâm',
-    senderRole: 'student',
-    text: 'Dạ em làm rồi thầy ơi!',
-    timestamp: new Date(Date.now() - 150000),
-  },
-];
+export const getInitialChatMessages = (): MockChatMessage[] => [];
 
 
 // 2. Dữ liệu Bảng điều khiển (Lịch học & Thông báo)

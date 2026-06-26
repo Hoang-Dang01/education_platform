@@ -165,4 +165,7 @@ model TelemetrySample {
   bitrateKbps Float?
   fps         Float?
   createdAt   DateTime @default(now())
+
+  // Composite index optimized for cleanup queries that filter by sessionId + date range simultaneously
+  @@index([sessionId, createdAt])
 }

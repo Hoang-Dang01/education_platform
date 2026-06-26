@@ -3,14 +3,14 @@
   height: 100%;
   border-radius: 0;
   border: none;
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 1px solid var(--glass-border);
   display: flex;
   flex-direction: column;
-  background: rgba(10, 15, 28, 0.85);
+  background: var(--glass-bg);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   z-index: 15;
-  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--glass-shadow);
   animation: slide-in var(--transition-normal) forwards;
 }
 
@@ -24,7 +24,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--glass-border);
 }
 
 .tabs {
@@ -51,12 +51,12 @@
 
 .tab-btn:hover {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--glass-bg-hover);
 }
 
 .tab-btn.active {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.08);
+  background: var(--glass-bg-active);
+  border-color: var(--glass-border);
   color: var(--color-primary-light);
 }
 
@@ -96,8 +96,8 @@
 }
 
 .panel-header .close-btn:hover {
-  background: rgba(239, 68, 68, 0.15);
-  color: var(--color-danger-light);
+  background: var(--mic-muted-bg);
+  color: var(--mic-muted-color);
 }
 
 .panel-content {
@@ -183,27 +183,27 @@
 }
 
 .message-other .message-bubble {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
   color: var(--text-primary);
   border-top-left-radius: 2px;
 }
 
 .chat-input-bar {
   padding: 1rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid var(--glass-border);
   display: flex;
   gap: 0.75rem;
-  background: rgba(15, 22, 40, 0.3);
+  background: var(--bg-secondary);
 }
 
 .chat-input-bar input {
   flex: 1;
   padding: 0.75rem 1rem;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--bg-primary);
+  border: 1px solid var(--glass-border);
   border-radius: 8px;
-  color: white;
+  color: var(--text-primary);
   font-family: var(--font-body);
   font-size: 0.9rem;
   outline: none;
@@ -211,7 +211,7 @@
 }
 
 .chat-input-bar input:focus {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-primary);
   border-color: var(--color-primary-light);
 }
 
@@ -267,10 +267,10 @@
   align-items: center;
   gap: 0.4rem;
   padding: 0.4rem 0.75rem;
-  background: rgba(16, 185, 129, 0.15);
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: var(--mic-active-bg);
+  border: 1px solid var(--mic-active-border);
   border-radius: 6px;
-  color: var(--color-success-light);
+  color: var(--mic-active-color);
   font-size: 0.75rem;
   font-weight: 600;
   font-family: var(--font-body);
@@ -279,15 +279,16 @@
 }
 
 .export-btn:hover {
-  background: rgba(16, 185, 129, 0.3);
+  background: var(--mic-active-bg);
+  opacity: 0.9;
   transform: translateY(-1px);
 }
 
 /* Hand Queue List */
 .hand-raise-queue-alert {
   padding: 0.875rem;
-  background: rgba(245, 158, 11, 0.08);
-  border: 1px solid rgba(245, 158, 11, 0.2);
+  background: var(--hand-badge-bg);
+  border: 1px solid var(--hand-badge-border);
   border-radius: 10px;
 }
 
@@ -335,7 +336,8 @@
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem 1rem;
-  background: rgba(255, 255, 255, 0.015);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
   border-radius: 10px;
 }
 
@@ -370,19 +372,19 @@
   font-weight: 700;
   padding: 0.2rem 0.5rem;
   border-radius: 6px;
-  backdrop-filter: blur(4px);
+  backdrop-filter: var(--glass-blur);
 }
 
 .status-badge.success {
-  background: rgba(16, 185, 129, 0.12);
-  border: 1px solid rgba(16, 185, 129, 0.25);
-  color: var(--color-success-light);
+  background: var(--mic-active-bg);
+  border: 1px solid var(--mic-active-border);
+  color: var(--mic-active-color);
 }
 
 .status-badge.warning {
-  background: rgba(245, 158, 11, 0.12);
-  border: 1px solid rgba(245, 158, 11, 0.25);
-  color: var(--color-warning-light);
+  background: var(--hand-badge-bg);
+  border: 1px solid var(--hand-badge-border);
+  color: var(--hand-badge-color);
 }
 
 /* Signal Indicator Bars */
@@ -415,7 +417,7 @@
 
 .quality-indicator .sig {
   width: 2px;
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--border);
   border-radius: 1px;
 }
 
@@ -427,7 +429,7 @@
 .quality-indicator:has(.excel) .sig { background-color: var(--color-success-light); }
 .quality-indicator:has(.good) .sig:nth-child(-n+2) { background-color: var(--color-warning-light); }
 .quality-indicator:has(.poor) .sig:nth-child(1) { background-color: var(--color-danger-light); }
-.quality-indicator:has(.crit) .sig { background-color: rgba(255, 255, 255, 0.15); }
+.quality-indicator:has(.crit) .sig { background-color: var(--border); }
 .quality-indicator:has(.crit)::after {
   content: '!';
   position: absolute;

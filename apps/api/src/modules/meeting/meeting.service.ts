@@ -7,7 +7,8 @@ import {
   Inject,
 } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import { MEDIA_PROVIDER, MediaProvider } from './media/media-provider.interface';
+import { MEDIA_PROVIDER } from './media/media-provider.interface';
+import type { MediaProvider } from './media/media-provider.interface';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
@@ -113,20 +114,77 @@ export class MeetingService {
       throw new BadRequestException('Mã buổi học (sessionId) là bắt buộc.');
     }
 
-    // 1. Verify user role & enrollment permissions
-    await this.canJoinSession(userId, sessionId);
-
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    const initialSession = await this.prisma.session.findUnique({
-      where: { id: sessionId },
-      include: { class: true },
-    });
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sessionId);
+    let session;
 
-    if (!user || !initialSession) {
-      throw new NotFoundException('Dữ liệu không khớp.');
+    if (!isUuid && this.configService.get('NODE_ENV') !== 'production') {
+      this.logger.log(`[DEV MODE] Auto-handling non-UUID join session for roomName: ${sessionId}`);
+      session = await this.prisma.session.findFirst({
+        where: { roomName: sessionId, status: 'live' },
+        include: { class: true },
+      });
+
+      if (!session) {
+        this.logger.log(`[DEV MODE] Live session not found for roomName: ${sessionId}. Auto-creating...`);
+        let cls = await this.prisma.class.findFirst();
+        if (!cls) {
+          const teacher = await this.prisma.user.findFirst({ where: { role: 'teacher' } })
+            || await this.prisma.user.findFirst({ where: { role: 'admin' } })
+            || await this.prisma.user.findFirst();
+          let course = await this.prisma.course.findFirst();
+          if (!course) {
+            course = await this.prisma.course.create({
+              data: {
+                name: 'Khóa học Thử nghiệm',
+                code: 'TEST-101',
+                description: 'Khóa học dùng để test WebRTC',
+              }
+            });
+          }
+          if (teacher) {
+            cls = await this.prisma.class.create({
+              data: {
+                name: 'Lớp học Thử nghiệm',
+                courseId: course.id,
+                teacherId: teacher.id,
+                earlyJoinMins: 15,
+              }
+            });
+          }
+        }
+        if (!cls) {
+          throw new BadRequestException('Không thể tự động tạo phiên học thử do thiếu giáo viên/khóa học trong DB.');
+        }
+
+        session = await this.prisma.session.create({
+          data: {
+            classId: cls.id,
+            roomName: sessionId,
+            status: 'live',
+            startTime: new Date(),
+          },
+          include: { class: true },
+        });
+
+        try {
+          await this.mediaProvider.createRoom(sessionId);
+        } catch (e) {
+          this.logger.warn(`Failed to initialize media room: ${e.message}`);
+        }
+      }
+    } else {
+      // 1. Verify user role & enrollment permissions
+      await this.canJoinSession(userId, sessionId);
+      session = await this.prisma.session.findUnique({
+        where: { id: sessionId },
+        include: { class: true },
+      });
     }
 
-    let session = initialSession;
+    if (!user || !session) {
+      throw new NotFoundException('Dữ liệu không khớp.');
+    }
     const cls = session.class;
     const isStaff = user.role === 'admin' || user.role === 'manager' || user.role === 'teacher';
 
@@ -206,7 +264,7 @@ export class MeetingService {
     try {
       token = await this.mediaProvider.generateAccessToken(
         session.roomName,
-        { id: user.id, name: user.name, isTeacher },
+        { id: user.id, name: user.name, isTeacher, role: user.role },
       );
     } catch (e) {
       this.logger.warn(`Failed to generate media token: ${e.message}`);
@@ -260,7 +318,7 @@ export class MeetingService {
     try {
       token = await this.mediaProvider.generateAccessToken(
         roomName,
-        { id: user.id, name: user.name, isTeacher },
+        { id: user.id, name: user.name, isTeacher, role: user.role },
       );
     } catch (e) {
       this.logger.warn(`Failed to generate token: ${e.message}`);

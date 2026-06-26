@@ -4,9 +4,9 @@
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: var(--bg-dark);
+  background: var(--app-bg);
   overflow: hidden;
-  padding: 1rem 1rem 6.5rem 1rem; /* Spacing for floating control bar at bottom */
+  padding: 0.85rem 0.85rem 5.5rem 0.85rem; /* Increased bottom for floating control bar */
 }
 
 /* Header Bar */
@@ -14,11 +14,17 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem 1.5rem;
-  border-radius: 12px;
-  height: 70px;
+  padding: 0.4rem 1.25rem;
+  border-radius: 14px;
+  height: 48px;
+  flex-shrink: 0;
   z-index: 10;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow);
 }
 
 .class-info {
@@ -60,7 +66,7 @@
 }
 
 .timer-badge {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--bg-secondary);
   border: 1px solid var(--glass-border);
   padding: 0.35rem 0.75rem;
   border-radius: 6px;
@@ -73,7 +79,7 @@
   flex: 1;
   display: flex;
   width: 100%;
-  height: calc(100% - 80px);
+  height: calc(100% - 60px);
   gap: 1rem;
   overflow: hidden;
 }
@@ -107,7 +113,9 @@
   flex-direction: column;
   justify-content: space-between;
   overflow: hidden;
-  background: #090d16;
+  background: var(--bg-secondary);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
 }
 
 /* Luồng màn hình thật từ getDisplayMedia */
@@ -150,11 +158,11 @@
   align-items: center;
   gap: 1.25rem;
   padding: 2.5rem 3.5rem;
-  background: linear-gradient(135deg, rgba(30, 41, 71, 0.45) 0%, rgba(15, 23, 42, 0.45) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
   border-radius: 16px;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(8px);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: var(--glass-blur);
   max-width: 90%;
 }
 
@@ -280,13 +288,13 @@
   justify-content: space-between;
   align-items: center;
   gap: 2rem;
-  background: rgba(234, 88, 12, 0.25); /* Orange/Red subtle glassmorphism */
-  border: 1px solid rgba(234, 88, 12, 0.4);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: var(--mic-muted-bg);
+  border: 1px solid var(--mic-muted-border);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   padding: 0.6rem 1.25rem;
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 15px rgba(234, 88, 12, 0.15);
+  box-shadow: var(--glass-shadow);
   animation: slide-down-fade 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
@@ -300,13 +308,13 @@
   width: 14px;
   height: 14px;
   border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #ea580c;
+  border-top-color: var(--color-danger);
   border-radius: 50%;
   animation: lk-spin 0.8s linear infinite;
 }
 
 .reconnecting-icon-anim {
-  color: #f97316;
+  color: var(--color-danger);
   animation: lk-pulse 1.5s ease-in-out infinite;
 }
 
@@ -318,9 +326,9 @@
 }
 
 .reconnecting-leave-btn {
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.4);
-  color: #fca5a5;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
   font-size: 0.75rem;
   font-weight: 600;
   padding: 0.35rem 0.75rem;
@@ -330,10 +338,8 @@
 }
 
 .reconnecting-leave-btn:hover {
-  background: rgba(239, 68, 68, 0.35);
-  border-color: #ef4444;
-  color: #fff;
-  box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+  background: var(--glass-bg-hover);
+  border-color: var(--glass-border-hover);
 }
 
 @keyframes slide-down-fade {

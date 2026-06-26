@@ -80,6 +80,7 @@ export const VideoGrid: React.FC = () => {
   const getGridClass = (count: number) => {
     if (count === 1) return 'grid-cols-1';
     if (count === 2) return 'grid-cols-2';
+    if (count === 3) return 'layout-3';
     if (count <= 4) return 'grid-cols-2-rows-2';
     if (count <= 6) return 'grid-cols-3-rows-2';
     if (count <= 8) return 'grid-cols-4-rows-2';

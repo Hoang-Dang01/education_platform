@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { JitsiClient } from '../lib/jitsiService';
 import { LiveKitClient } from '../lib/media/livekitClient';
 import type { MediaClient } from '../lib/media/media-client.interface';
@@ -62,6 +62,8 @@ const drift = (range: number) => (Math.random() - 0.5) * 2 * range;
 interface MeetingContextType {
   screen: 'lms' | 'classroom';
   roomName: string;
+  className: string;
+  lessonTitle: string;
   sessionId: string | null;
   participants: Participant[];
   chatMessages: ChatMessage[];
@@ -74,6 +76,8 @@ interface MeetingContextType {
   screenStream: MediaStream | null;
   screenTrack: any | null;
   screenSharingUserId: string;
+  layoutMode: 'grid' | 'focus' | 'screenshare';
+  setLayoutMode: (mode: 'grid' | 'focus') => void;
   shareApprovalPending: boolean;
   shareApproved: boolean;
   chatOpen: boolean;
@@ -111,6 +115,8 @@ const MeetingContext = createContext<MeetingContextType | undefined>(undefined);
 export const MeetingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [screen, setScreen] = useState<'lms' | 'classroom'>('lms');
   const [roomName, setRoomName] = useState('');
+  const [className, setClassName] = useState('');
+  const [lessonTitle, setLessonTitle] = useState('');
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -141,6 +147,8 @@ export const MeetingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
   const [screenTrack, setScreenTrack] = useState<any | null>(null);
   const [screenSharingUserId, setScreenSharingUserId] = useState<string>('');
+  const [userLayoutMode, setUserLayoutMode] = useState<'grid' | 'focus'>('grid');
+  const layoutMode = isScreenSharing ? 'screenshare' : userLayoutMode;
   const [shareApprovalPending, setShareApprovalPending] = useState(false);
   const [shareApproved, setShareApproved] = useState(false);
   const [isHandRaised, setIsHandRaised] = useState(false);
@@ -409,10 +417,22 @@ export const MeetingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         networkLabel: localDevice.networkLabel
       };
 
-      if (isMockMode() || sessId.length !== 36) {
-        console.log('[MOCK MODE] Bỏ qua Jitsi, dùng dữ liệu mô phỏng cho room:', sessId);
+      const isKnownMock = ['session-math-live', 'session-phys', 'session-chem', 'session-java', 'lc1', 'lc2', 'lc3'].includes(sessId) || sessId.startsWith('mock-') || sessId.startsWith('class-');
+      if (isMockMode() || isKnownMock) {
+        console.log('[MOCK MODE] Activating mock mode for room:', sessId);
+        // Derive a friendly display name from the session ID slug
+        const mockClassMap: Record<string, { className: string; lessonTitle: string }> = {
+          'session-math-live': { className: 'Lớp Toán Học 12A1', lessonTitle: 'Tích phân & Ứng dụng Giải tích' },
+          'session-phys': { className: 'Lớp Vật Lý 12B2', lessonTitle: 'Dao động cơ học & Sóng âm' },
+          'session-chem': { className: 'Lớp Hóa Học 12C3', lessonTitle: 'Este, Lipit & Cacbohidrat' },
+          'session-java': { className: 'Lớp Java Beginner J1', lessonTitle: 'Lập trình hướng đối tượng' },
+        };
+        const matchedKey = Object.keys(mockClassMap).find(k => sessId.includes(k));
+        const matched = matchedKey ? mockClassMap[matchedKey] : { className: 'Lớp Học Trực Tuyến', lessonTitle: 'Buổi học' };
         setSessionId(sessId);
         setRoomName(sessId);
+        setClassName(matched.className);
+        setLessonTitle(matched.lessonTitle);
         setScreen('classroom');
         setParticipants(getMockParticipants(userName, userRole));
         setChatMessages(getInitialChatMessages());
@@ -500,11 +520,15 @@ export const MeetingProvider: React.FC<{ children: React.ReactNode }> = ({ child
           setIsScreenSharing(false);
         },
         onParticipantJoined: (id, displayName, pRole) => {
+          const resolvedRole = ['admin', 'manager', 'teacher', 'student'].includes(pRole)
+            ? (pRole as UserRole)
+            : roleFromJitsi(pRole);
+
           setParticipants(prev => {
             const exists = prev.some(p => p.id === id);
             if (exists) {
               return prev.map(p =>
-                p.id === id ? { ...p, name: displayName || 'Học sinh', role: roleFromJitsi(pRole) } : p
+                p.id === id ? { ...p, name: displayName || 'Học sinh', role: resolvedRole } : p
               );
             }
             return [
@@ -512,7 +536,7 @@ export const MeetingProvider: React.FC<{ children: React.ReactNode }> = ({ child
               {
                 id,
                 name: displayName || 'Học sinh',
-                role: pRole === 'moderator' ? 'teacher' : 'student',
+                role: resolvedRole,
                 isLocal: false,
                 isAudioMuted: false,
                 isVideoMuted: false,
@@ -528,13 +552,17 @@ export const MeetingProvider: React.FC<{ children: React.ReactNode }> = ({ child
           setParticipants(prev => prev.filter(p => p.id !== id));
         },
         onChatMessageReceived: (senderId, senderName, text, timestamp) => {
+          const senderRole = senderId === 'local-user'
+            ? userRole
+            : (participantsRef.current.find(p => p.id === senderId)?.role || 'student');
+
           setChatMessages(prev => [
             ...prev,
             {
               id: `msg-${Date.now()}-${Math.random()}`,
               senderId,
               senderName,
-              senderRole: senderId === 'local-user' ? userRole : 'student',
+              senderRole: senderRole,
               text,
               timestamp: timestamp || new Date()
             }
@@ -549,7 +577,17 @@ export const MeetingProvider: React.FC<{ children: React.ReactNode }> = ({ child
           const jitter = stats.jitter ?? 0;
           const quality = qualityFromMetrics(rtt, loss, jitter);
           setParticipants(prev =>
-            prev.map(p => (p.id === id || (p.isLocal && id === 'local-user') ? { ...p, connectionQuality: quality } : p))
+            prev.map(p =>
+              p.id === id || (p.isLocal && id === 'local-user')
+                ? {
+                    ...p,
+                    connectionQuality: quality,
+                    latency: rtt,
+                    packetLoss: loss,
+                    jitter: jitter,
+                  }
+                : p
+            )
           );
         },
         onHandRaiseChanged: (id, isRaised) => {
@@ -851,16 +889,16 @@ export const MeetingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setChatMessages(prev => [...prev, newMsg]);
   };
 
-  const muteParticipant = (id: string) => {
+  const muteParticipant = useCallback((id: string) => {
     setParticipants(pList => pList.map(p => (p.id === id ? { ...p, isAudioMuted: true } : p)));
-  };
+  }, []);
 
-  const lowerParticipantHand = (id: string) => {
+  const lowerParticipantHand = useCallback((id: string) => {
     mediaClientRef.current?.lowerParticipantHand(id);
     setParticipants(pList =>
       pList.map(p => (p.id === id ? { ...p, isHandRaised: false, handRaiseTime: undefined } : p))
     );
-  };
+  }, []);
 
   const dismissAlert = (id: string) => {
     setDismissedAlertIds(prev => [...prev, id]);
@@ -888,6 +926,8 @@ export const MeetingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       value={{
         screen,
         roomName,
+        className,
+        lessonTitle,
         sessionId,
         participants,
         chatMessages,
@@ -900,6 +940,8 @@ export const MeetingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         screenStream,
         screenTrack,
         screenSharingUserId,
+        layoutMode,
+        setLayoutMode: setUserLayoutMode,
         shareApprovalPending,
         shareApproved,
         chatOpen,

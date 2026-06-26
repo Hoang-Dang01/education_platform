@@ -13,6 +13,8 @@ import {
   PhoneOff,
   Loader2,
   Circle,
+  LayoutGrid,
+  LayoutList,
 } from 'lucide-react';
 import { isInstructor } from '../../lib/roles';
 import { saveMaterial } from '../../lib/localDb';
@@ -42,6 +44,8 @@ export const ControlBar: React.FC = () => {
     screenSharingUserId,
     screenStream,
     roomName,
+    layoutMode,
+    setLayoutMode,
   } = useMeeting();
 
   const { user } = useAuth();
@@ -218,8 +222,23 @@ export const ControlBar: React.FC = () => {
           </button>
         </div>
 
-        {/* Section 3: Panels Toggle */}
+        {/* Section 3: Panels Toggle & Layout */}
         <div className="control-group">
+          <button
+            onClick={() => setLayoutMode(layoutMode === 'grid' ? 'focus' : 'grid')}
+            className={`action-btn ${layoutMode !== 'screenshare' ? 'active' : 'disabled'}`}
+            title={
+              layoutMode === 'screenshare'
+                ? 'Đang khóa ở chế độ trình chiếu'
+                : layoutMode === 'grid'
+                  ? 'Chuyển sang Góc nhìn tập trung (Focus View)'
+                  : 'Chuyển sang Góc nhìn lưới (Grid View)'
+            }
+            disabled={layoutMode === 'screenshare'}
+          >
+            {layoutMode === 'focus' ? <LayoutGrid size={26} /> : <LayoutList size={26} />}
+          </button>
+
           <button
             onClick={toggleChat}
             className={`action-btn ${chatOpen && panelOpen && activeTab === 'chat' ? 'panel-active' : 'idle'}`}

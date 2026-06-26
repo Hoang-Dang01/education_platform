@@ -1,7 +1,10 @@
+import { UserRole } from '@prisma/client';
+
 export interface MeetingUser {
   id: string;
   name: string;
   isTeacher: boolean;
+  role?: UserRole;
 }
 
 export interface ParticipantInfo {
