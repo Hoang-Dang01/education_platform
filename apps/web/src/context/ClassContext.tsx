@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { api, ApiError } from '../lib/api';
 import { useAuth } from './AuthContext';
+import type { UserRole } from '../lib/roles';
 
 export interface Participant {
   id: string;
   name: string;
-  role: string;
+  role: UserRole;
   isLocal: boolean;
   isAudioMuted: boolean;
   isVideoMuted: boolean;

@@ -5,7 +5,6 @@ import {
   RemoteTrackPublication, 
   RemoteTrack, 
   ConnectionQuality,
-  LocalParticipant,
   TrackPublication
 } from 'livekit-client';
 import type { MediaClient, MediaClientCallbacks, MediaTrack } from './media-client.interface';
@@ -288,7 +287,7 @@ export class LiveKitClient implements MediaClient {
     });
 
     // Handle local publication updates to prevent ghost videos
-    room.on(RoomEvent.LocalTrackPublished, (publication: TrackPublication, participant: LocalParticipant) => {
+    room.on(RoomEvent.LocalTrackPublished, (publication: TrackPublication) => {
       if (publication.track) {
         console.log('[LiveKitClient] Local track published:', publication.track.kind);
         const adaptedTrack = new LiveKitTrackAdapter(
@@ -301,7 +300,7 @@ export class LiveKitClient implements MediaClient {
       }
     });
 
-    room.on(RoomEvent.LocalTrackUnpublished, (publication: TrackPublication, participant: LocalParticipant) => {
+    room.on(RoomEvent.LocalTrackUnpublished, (publication: TrackPublication) => {
       console.log('[LiveKitClient] Local track unpublished:', publication.kind);
       const adaptedTrack = new LiveKitTrackAdapter(
         publication.track,
