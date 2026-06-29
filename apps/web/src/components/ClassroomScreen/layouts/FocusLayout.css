@@ -1,0 +1,94 @@
+.focus-layout-container {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  gap: 1rem;
+  overflow: hidden;
+}
+
+.spotlight-wrapper {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.spotlight-wrapper .video-card {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 14px;
+}
+
+.side-strip-container {
+  width: 250px;
+  height: 100%;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-left: 1px solid var(--border);
+  padding-left: 0.75rem;
+}
+
+.side-strip-scrollable {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  height: 100%;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.side-strip-card-wrapper {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  flex-shrink: 0;
+}
+
+/* Scrollbar styles for side strip */
+.side-strip-scrollable::-webkit-scrollbar {
+  width: 6px;
+}
+
+.side-strip-scrollable::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.side-strip-scrollable::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+/* Responsive adjustment for small screens */
+@media (max-width: 900px) {
+  .focus-layout-container {
+    flex-direction: column;
+  }
+  .side-strip-container {
+    width: 100%;
+    height: 140px;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    padding-left: 0;
+    padding-top: 0.75rem;
+  }
+  .side-strip-scrollable {
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    height: 100%;
+  }
+  .side-strip-card-wrapper {
+    height: 100%;
+    width: auto;
+    aspect-ratio: 16 / 9;
+  }
+  .side-strip-scrollable::-webkit-scrollbar {
+    height: 6px;
+    width: auto;
+  }
+}

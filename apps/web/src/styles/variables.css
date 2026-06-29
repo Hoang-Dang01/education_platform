@@ -1,0 +1,176 @@
+:root {
+  color-scheme: dark;
+  /* Colors */
+  --app-bg: radial-gradient(circle at center, #0e1629 0%, #090d16 100%);
+  --bg-primary: #0e1322;
+  --bg-secondary: #171e30;
+  --surface: #1b2230;
+  --surface-elevated: #252f3f;
+  --border: rgba(255, 255, 255, 0.08);
+  
+  /* Glassmorphism */
+  --glass-bg: rgba(15, 22, 40, 0.65);
+  --glass-bg-hover: rgba(22, 32, 57, 0.75);
+  --glass-bg-active: rgba(30, 41, 71, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.06);
+  --glass-border-hover: rgba(255, 255, 255, 0.12);
+  --glass-blur: blur(16px);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+
+  /* Video Card Primitives */
+  --card-bg: #111827;
+  --card-border: rgba(255, 255, 255, 0.08);
+  
+  /* Avatar Primitives */
+  --avatar-bg: linear-gradient(135deg, rgba(30, 38, 60, 0.9), rgba(17, 24, 39, 0.95));
+  --avatar-border: rgba(255, 255, 255, 0.1);
+  --avatar-text: rgba(255, 255, 255, 0.85);
+  
+  /* Telemetry Indicators */
+  --telemetry-bg: rgba(5, 8, 15, 0.75);
+  --telemetry-color: rgba(255, 255, 255, 0.5);
+  --telemetry-border: rgba(255, 255, 255, 0.06);
+  
+  /* Mute / Active badge states */
+  --mic-active-bg: rgba(16, 185, 129, 0.2);
+  --mic-active-border: rgba(16, 185, 129, 0.45);
+  --mic-active-color: #6ee7b7;
+  
+  --mic-muted-bg: rgba(239, 68, 68, 0.2);
+  --mic-muted-border: rgba(239, 68, 68, 0.45);
+  --mic-muted-color: #fca5a5;
+
+  /* Interactive / Role badges */
+  --hand-badge-bg: rgba(245, 158, 11, 0.2);
+  --hand-badge-border: rgba(245, 158, 11, 0.4);
+  --hand-badge-color: #fcd34d;
+
+  --teacher-badge-bg: rgba(99, 102, 241, 0.2);
+  --teacher-badge-border: rgba(99, 102, 241, 0.45);
+  --teacher-badge-color: #a5b4fc;
+
+  /* Accents */
+  --color-primary: #4f46e5;
+  --color-primary-light: #6366f1;
+  --color-primary-glow: rgba(99, 102, 241, 0.25);
+  
+  --color-purple: #8b5cf6;
+  --color-purple-light: #a78bfa;
+  --color-purple-glow: rgba(139, 92, 246, 0.25);
+
+  --color-cyan: #06b6d4;
+  --color-cyan-light: #22d3ee;
+  --color-cyan-glow: rgba(6, 182, 212, 0.2);
+
+  --color-success: #10b981;
+  --color-success-light: #34d399;
+  --color-success-glow: rgba(16, 185, 129, 0.2);
+
+  --color-danger: #ef4444;
+  --color-danger-light: #f87171;
+  --color-danger-glow: rgba(239, 68, 68, 0.2);
+
+  --color-warning: #f59e0b;
+  --color-warning-light: #fbbf24;
+  --color-warning-glow: rgba(245, 158, 11, 0.2);
+
+  /* Typography */
+  --font-title: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+
+  /* Font colors */
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --text-dark: #0f172a;
+
+  /* Animation & Transitions */
+  --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-spring: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  /* Colors */
+  --app-bg: radial-gradient(circle at center, #ffffff 0%, #f3f6fb 100%);
+  --bg-primary: #ffffff;
+  --bg-secondary: #f1f5f9;
+  --surface: #ffffff;
+  --surface-elevated: #e2e8f0;
+  --border: #d9dde3;
+  
+  /* Glassmorphism (flat solid white in light theme) */
+  --glass-bg: #ffffff;
+  --glass-bg-hover: #f1f5f9;
+  --glass-bg-active: #e2e8f0;
+  --glass-border: #d9dde3;
+  --glass-border-hover: #cbd5e1;
+  --glass-blur: none;
+  --glass-shadow: 0 4px 12px 0 rgba(15, 23, 42, 0.05);
+
+  /* Video Card Primitives */
+  --card-bg: #ffffff;
+  --card-border: #d9dde3;
+  
+  /* Avatar Primitives */
+  --avatar-bg: #f1f5f9;
+  --avatar-border: #cbd5e1;
+  --avatar-text: #111827;
+  
+  /* Telemetry Indicators */
+  --telemetry-bg: #f1f5f9;
+  --telemetry-color: #475569;
+  --telemetry-border: #cbd5e1;
+  
+  /* Mute / Active badge states */
+  --mic-active-bg: rgba(16, 185, 129, 0.1);
+  --mic-active-border: rgba(16, 185, 129, 0.3);
+  --mic-active-color: #059669;
+  
+  --mic-muted-bg: rgba(239, 68, 68, 0.1);
+  --mic-muted-border: rgba(239, 68, 68, 0.3);
+  --mic-muted-color: #dc2626;
+
+  /* Interactive / Role badges */
+  --hand-badge-bg: rgba(245, 158, 11, 0.12);
+  --hand-badge-border: rgba(245, 158, 11, 0.3);
+  --hand-badge-color: #b45309;
+
+  --teacher-badge-bg: rgba(99, 102, 241, 0.12);
+  --teacher-badge-border: rgba(99, 102, 241, 0.3);
+  --teacher-badge-color: #4338ca;
+
+  /* Accents */
+  --color-primary: #6366f1;
+  --color-primary-light: #4f46e5;
+  --color-primary-glow: rgba(99, 102, 241, 0.12);
+  
+  --color-purple: #a78bfa;
+  --color-purple-light: #8b5cf6;
+  --color-purple-glow: rgba(139, 92, 246, 0.12);
+
+  --color-cyan: #22d3ee;
+  --color-cyan-light: #06b6d4;
+  --color-cyan-glow: rgba(6, 182, 212, 0.1);
+
+  --color-success: #10b981;
+  --color-success-light: #059669;
+  --color-success-glow: rgba(16, 185, 129, 0.1);
+
+  --color-danger: #ef4444;
+  --color-danger-light: #dc2626;
+  --color-danger-glow: rgba(239, 68, 68, 0.1);
+
+  --color-warning: #f59e0b;
+  --color-warning-light: #d97706;
+  --color-warning-glow: rgba(245, 158, 11, 0.1);
+
+  /* Font colors */
+  --text-primary: #111827;
+  --text-secondary: #475569;
+  --text-muted: #6b7280;
+  --text-dark: #f8fafc;
+}
+

@@ -1,0 +1,35 @@
+port: 7880
+bind_addresses:
+  - ""
+
+# API Credentials for Production - Keep these safe!
+keys:
+  # Format: <API_KEY>: <API_SECRET>
+  prodkey_livekit: secret_livekit_production_token_v3_secure
+
+logging:
+  level: info
+
+rtc:
+  # Public STUN/TURN server candidates sent to clients
+  stun_servers:
+    - stun.l.google.com:19302
+  
+  turn_servers:
+    - host: your-vps-public-ip # Replace with your actual public VPS IP address
+      port: 3478
+      username: edumeetuser
+      credential: edumeetpass
+      transport: udp
+    - host: your-vps-public-ip # TCP Fallback
+      port: 3478
+      username: edumeetuser
+      credential: edumeetpass
+      transport: tcp
+
+  # ICE UDP port range (narrowed range for security and pilot throughput)
+  port_range_start: 50000
+  port_range_end: 50200
+
+  # Fallback to TCP connection if UDP is blocked by firewalls
+  tcp_port: 7881

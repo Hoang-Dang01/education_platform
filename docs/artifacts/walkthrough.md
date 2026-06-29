@@ -110,6 +110,57 @@ Dưới đây là video ghi lại các quy trình kiểm thử tự động đư
 
 ---
 
+## 2. Hệ thống Xác thực JWT & Database Seeding (JWT Authentication & Database Seeding)
+
+### Kết Luận Nghiệm Thu (Implementation Acceptance)
+Hệ thống JWT Authentication và Database Seeding đã hoàn tất implementation theo kế hoạch 7 phase và vượt qua build verification thành công. Các thành phần cốt lõi (Environment configuration, Shared contracts, Register/Login flow, JWT strategy & route protection, Database seeding) đều đã hoạt động ở mức **MVP (Minimum Viable Product)**. 
+
+Để đạt được tiêu chuẩn **Production-ready authentication system**, hệ thống vẫn cần giải quyết các nợ kỹ thuật và kiểm thử tích hợp mở rộng được chi tiết dưới đây.
+
+### Các Tính Năng Đã Thực Hiện
+*   **Hạ tầng & Cấu hình môi trường (Phase 0)**:
+    *   Tích hợp `@nestjs/config` toàn cục và nạp file `.env` động từ thư mục `apps/api/.env` khi khởi chạy từ root.
+    *   Tự động phát hiện và ngắt khởi động ứng dụng nếu thiếu cấu hình `JWT_SECRET` ở môi trường production.
+*   **Hợp đồng dữ liệu & Validation nghiêm ngặt (Phase 1)**:
+    *   Định nghĩa các interface dùng chung `RegisterRequest`, `LoginRequest`, `AuthUserDto`, `AuthResponse` tại package `@edumeet/shared-types`.
+    *   Bật cấu hình `forbidNonWhitelisted: true` trên `ValidationPipe` toàn cục để từ chối các request gửi lên các thuộc tính rác.
+*   **Khung Module & DTOs an toàn (Phase 2)**:
+    *   Khởi tạo `AuthModule`, `AuthController`, `AuthService`.
+    *   Cấu hình `JwtModule.registerAsync()` dùng khóa bí mật động và thời gian hết hạn của token là `7d`.
+    *   Tạo lớp `RegisterDto` và `LoginDto` kế thừa kiểu dữ liệu shared-types.
+*   **Luồng Đăng ký và Đăng nhập (Phase 3 & Phase 5)**:
+    *   Mật khẩu được mã hóa an toàn qua bcrypt với số vòng băm `10`.
+    *   Ngăn chặn Role Escalation: Đăng ký qua endpoint công khai luôn bị ép buộc vai trò là `student`.
+    *   Đăng ký trùng email trả về mã lỗi `409 Conflict`.
+    *   Xác thực thông tin đăng nhập, sinh token JWT chứa payload: `sub` (id), `email`, `role`, `name`.
+*   **Tải thông tin cá nhân `/auth/me` (Phase 6)**:
+    *   Triển khai `JwtStrategy` và `JwtAuthGuard` để bảo vệ các tuyến đường riêng tư.
+    *   Endpoint `/auth/me` thực hiện truy vấn trực tiếp vào PostgreSQL qua Prisma dựa trên `sub` để đảm bảo response phản ánh dữ liệu user mới nhất trong database thay vì chỉ dựa trên stale JWT payload.
+*   **Database Seeding thông minh (Phase 4)**:
+    *   Thiết lập script `seed.ts` sử dụng `Promise.all` băm song song 4 mật khẩu để tăng tốc độ.
+    *   Dùng `prisma.user.upsert` trên trường `@unique` email đảm bảo kịch bản seed có thể chạy lại nhiều lần mà không crash.
+    *   Khởi tạo 4 tài khoản thử nghiệm tương ứng với 4 vai trò chính: admin, manager, teacher, student.
+
+### Hạn chế & Nợ kỹ thuật (Technical Debt)
+> [!WARNING]
+> *   **Chưa thực thi phân quyền (Authorization)**: Vai trò (`UserRole`) hiện tại mới được lưu trong CSDL và giải mã vào JWT payload, chưa được thực thi chặn các route hành vi (thiếu `RolesGuard` hoặc `@Roles()` decorator).
+> *   **Thời hạn Access Token dài**: Token đang sống `7d` (phục vụ local MVP). Production sẽ yêu cầu chia tách Access Token (15m - 1h) và Refresh Token (7d - 30d).
+> *   **Thiếu cơ chế thu hồi/đăng xuất (Token Revocation / Logout)**: Chưa cấu hình danh sách đen (Blacklist/Redis blocklist) để vô hiệu hóa JWT khi người dùng bấm Đăng xuất.
+> *   **Mật khẩu Seed mặc định công khai**: Tài khoản seed có mật khẩu đơn giản (`admin123`, `teacher123`, v.v.) chỉ được dùng cho môi trường development/testing. Phải tắt hoặc đổi thông tin này trước khi deploy production.
+> *   **Thiếu tính năng bổ trợ**: Các phân hệ Password Reset (Quên mật khẩu) và Email Verification (Xác thực email đăng ký) chưa được triển khai.
+
+### Kết Quả Xác Minh (Build & Verification)
+*   **Database Seeding (`npm run prisma:seed`)**:
+    *   Chạy thành công từ root workspace thông qua NPM Workspaces.
+    *   Tạo thành công 4 tài khoản mẫu: `admin@edumeet.vn`, `manager@edumeet.vn`, `teacher@edumeet.vn`, `student@edumeet.vn` với mật khẩu đã băm.
+    *   Chạy lại lần thứ 2, lệnh seed vẫn thành công trơn tru nhờ tính năng `upsert`.
+*   **Backend Server Startup (`npm run dev:api`)**:
+    *   Khởi động thành công, nhận diện tệp cấu hình `.env` cục bộ.
+    *   Tạo kết nối database PostgreSQL cổng 5432 thành công thông qua driver adapter `PrismaPg` (Prisma v7).
+    *   Khớp nối toàn bộ các API `/auth/register`, `/auth/login`, và `/auth/me` chạy trơn tru.
+
+---
+
 ## 3. Hướng dẫn trải nghiệm nhanh
 Bạn hãy mở trình duyệt và click lại vào link:
 🔗 **[http://localhost:5173/](http://localhost:5173/)**

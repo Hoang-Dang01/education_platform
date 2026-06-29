@@ -1,0 +1,15 @@
+# LiveKit Egress configuration
+ws_url: wss://livekit.yourdomain.com # Replace with your public LiveKit domain
+
+# API Credentials (matching keys in VPS livekit.yaml)
+api_key: prodkey_livekit
+api_secret: secret_livekit_production_token_v3_secure
+
+# Target Storage Configuration (using S3-compatible MinIO)
+s3:
+  access_key: minioadmin
+  secret_key: minioadminpassword
+  endpoint: http://minio:9000 # MinIO service inside the egress compose network
+  bucket: edumeet-recordings
+  region: us-east-1
+  force_path_style: true
