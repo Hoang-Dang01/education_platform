@@ -25,7 +25,7 @@ export const SidePanel: React.FC = () => {
   const role = user?.role || 'student';
 
   const [inputVal, setInputVal] = useState('');
-  const chatEndRef = useRef<HTMLDivElement>(null);
+  const messagesListRef = useRef<HTMLDivElement>(null);
 
   // local breakout inputs
   const [numRoomsInput, setNumRoomsInput] = useState(2);
@@ -33,8 +33,8 @@ export const SidePanel: React.FC = () => {
 
   // Auto scroll to chat bottom
   useEffect(() => {
-    if (activeTab === 'chat' && chatEndRef.current) {
-      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (activeTab === 'chat' && messagesListRef.current) {
+      messagesListRef.current.scrollTop = messagesListRef.current.scrollHeight;
     }
   }, [chatMessages, activeTab, panelOpen]);
 
@@ -247,7 +247,7 @@ export const SidePanel: React.FC = () => {
         {activeTab === 'chat' ? (
           /* Chat Section */
           <div className="chat-container">
-            <div className="messages-list">
+            <div ref={messagesListRef} className="messages-list">
               {chatMessages.map((msg: any) => {
                 const isMe = msg.senderId === 'local-user';
                 return (
@@ -263,7 +263,6 @@ export const SidePanel: React.FC = () => {
                   </div>
                 );
               })}
-              <div ref={chatEndRef} />
             </div>
 
             <form onSubmit={handleSend} className="chat-input-bar">

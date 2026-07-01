@@ -66,9 +66,8 @@ export class JitsiClient implements MediaClient {
 
     const normalizedRoom = roomName.toLowerCase().replace(/[^a-z0-9_-]/g, '');
 
-    const jitsiHost = import.meta.env.VITE_JITSI_HOST || 'meet.jit.si';
+    const jitsiHost = import.meta.env.VITE_JITSI_HOST || 'meet.ffmuc.net';
     const jitsiPort = import.meta.env.VITE_JITSI_PORT || '443';
-    const isSelfHosted = jitsiHost !== 'meet.jit.si';
 
     // Xác định schema và port suffix
     const isHttps = jitsiPort === '443' || jitsiPort === '8443';
@@ -77,27 +76,16 @@ export class JitsiClient implements MediaClient {
       ? ''
       : `:${jitsiPort}`;
 
-    // Cấu hình kết nối XMPP
-    const connectionConfig = isSelfHosted
-      ? {
-          hosts: {
-            domain: 'meet.edumeet.local',
-            muc: 'conference.meet.edumeet.local',
-            focus: 'focus.meet.edumeet.local',
-          },
-          serviceUrl: `${wsScheme}://${jitsiHost}${portSuffix}/xmpp-websocket`,
-          clientNode: 'http://jitsi.org/jitsimeet',
-          disableThirdPartyRequests: true,
-        }
-      : {
-          hosts: {
-            domain: 'meet.jit.si',
-            muc: 'conference.meet.jit.si',
-            focus: 'focus.meet.jit.si',
-          },
-          serviceUrl: `wss://meet.jit.si/xmpp-websocket?room=${normalizedRoom}`,
-          clientNode: 'http://jitsi.org/jitsimeet',
-        };
+    // Cấu hình kết nối XMPP động
+    const connectionConfig = {
+      hosts: {
+        domain: jitsiHost,
+        muc: `conference.${jitsiHost}`,
+        focus: `focus.${jitsiHost}`,
+      },
+      serviceUrl: `${wsScheme}://${jitsiHost}${portSuffix}/xmpp-websocket?room=${normalizedRoom}`,
+      clientNode: 'http://jitsi.org/jitsimeet',
+    };
 
     console.log(`[JitsiClient] Connecting to: ${jitsiHost}${portSuffix}`);
     console.log(`[JitsiClient] Room: ${normalizedRoom} | User: ${userName}`);

@@ -212,3 +212,33 @@
   transform: scale(1.05);
 }
 
+@media (max-width: 768px) {
+  .control-bar-wrapper {
+    bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  }
+  
+  .control-bar {
+    gap: 0.35rem;
+    padding: 0.4rem 0.75rem;
+  }
+  
+  .control-group {
+    gap: 0.15rem;
+  }
+  
+  .control-group:not(:last-child) {
+    padding-right: 0.5rem;
+  }
+  
+  .control-bar .action-btn {
+    width: 38px;
+    height: 38px;
+    margin: 3px; /* Bổ sung lề ngoài để tổng diện tích tương tác (hitbox) vẫn là 44px (38px + 3px*2) */
+  }
+  
+  .control-bar .action-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+

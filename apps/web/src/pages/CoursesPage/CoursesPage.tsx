@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useClass } from '../../context/ClassContext';
 import { useAuth } from '../../context/AuthContext';
-import { BookOpen, FileText, Video, Download, Upload, Search, ArrowLeft, Plus, Users, UserCheck, Trash2, X, FileImage, Folder, Loader2, AlertCircle } from 'lucide-react';
+import { BookOpen, FileText, Video, Download, Upload, Search, ArrowLeft, Plus, Users, UserCheck, Trash2, X, FileImage, Folder, Loader2, AlertCircle, Eye, Share2 } from 'lucide-react';
 import type { MockCourse } from '../../lib/mockData';
 import { can } from '../../lib/roles';
 import { api } from '../../lib/api';
@@ -19,11 +19,13 @@ const COURSE_HEADINGS: Record<string, { title: string; subtitle: string }> = {
 export const CoursesPage: React.FC = () => {
   const { courses, loading: lmsLoading, error: lmsError, refreshLmsData } = useClass();
   const { user } = useAuth();
+  const token = localStorage.getItem('accessToken') || '';
   const role = user?.role || 'student';
   const userName = user?.name || '';
   const [selectedCourse, setSelectedCourse] = useState<MockCourse | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'courses' | 'personal'>('courses');
+  const [shareMaterialId, setShareMaterialId] = useState<string | null>(null);
 
   // Các state kiểm soát tài liệu và upload
   const [personalMaterials, setPersonalMaterials] = useState<any[]>([]);
@@ -39,6 +41,27 @@ export const CoursesPage: React.FC = () => {
   const canManageCourses = can(role, 'manage_courses'); // admin, manager
   const canShareMaterials = can(role, 'share_materials'); // admin, manager, teacher
   const heading = COURSE_HEADINGS[role] ?? COURSE_HEADINGS.student;
+
+  // Pronoun detection helper
+  const getPronoun = (name: string): string => {
+    const normalized = name.toLowerCase().trim();
+    if (normalized.startsWith('cô') || normalized.includes(' cô ')) return 'cô';
+    if (normalized.startsWith('thầy') || normalized.includes(' thầy ')) return 'thầy';
+    return 'bạn';
+  };
+
+  const pronoun = getPronoun(userName);
+  const capitalizedPronoun = pronoun.charAt(0).toUpperCase() + pronoun.slice(1);
+
+  const dynamicSubtitle = React.useMemo(() => {
+    if (role === 'student') {
+      return `Các môn ${pronoun} đang theo học và tiến độ hoàn thành.`;
+    }
+    if (role === 'teacher') {
+      return `Các lớp ${pronoun} đang giảng dạy và quản lý tài liệu.`;
+    }
+    return heading.subtitle;
+  }, [role, pronoun, heading.subtitle]);
 
   // Tải danh sách tài liệu cá nhân từ backend
   const loadPersonalMaterials = async () => {
@@ -370,24 +393,45 @@ export const CoursesPage: React.FC = () => {
                   </div>
                   <div className="material-actions">
                     {m.url && m.url !== '#' ? (
-                      <a 
-                        href={`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}${m.url}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="download-btn-icon"
-                        title="Tải xuống"
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                      >
-                        <Download size={14} />
-                      </a>
+                      <>
+                        <a 
+                          href={`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}${m.url}?view=true&token=${token}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="download-btn-icon view-btn"
+                          title="Xem tài liệu"
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          <Eye size={14} />
+                        </a>
+                        <a 
+                          href={`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}${m.url}?token=${token}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="download-btn-icon"
+                          title="Tải xuống"
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          <Download size={14} />
+                        </a>
+                      </>
                     ) : (
-                      <button 
-                        className="download-btn-icon" 
-                        title="Tải xuống"
-                        onClick={() => handleDownloadMock(m.title, m.type)}
-                      >
-                        <Download size={14} />
-                      </button>
+                      <>
+                        <button 
+                          className="download-btn-icon view-btn" 
+                          title="Xem trực tuyến (Bản mẫu)"
+                          onClick={() => alert(`Xem trực tuyến tài liệu mẫu: ${m.title}`)}
+                        >
+                          <Eye size={14} />
+                        </button>
+                        <button 
+                          className="download-btn-icon" 
+                          title="Tải xuống"
+                          onClick={() => handleDownloadMock(m.title, m.type)}
+                        >
+                          <Download size={14} />
+                        </button>
+                      </>
                     )}
                     {canDelete && m.url && m.url !== '#' && (
                       <button 
@@ -515,7 +559,7 @@ export const CoursesPage: React.FC = () => {
       <div className="courses-page-head">
         <div>
           <h2 className="courses-page-title">{heading.title}</h2>
-          <p className="courses-page-subtitle">{heading.subtitle}</p>
+          <p className="courses-page-subtitle">{dynamicSubtitle}</p>
         </div>
         {canManageCourses && activeTab === 'courses' && (
           <button className="upload-btn">
@@ -561,49 +605,63 @@ export const CoursesPage: React.FC = () => {
       </div>
 
       {activeTab === 'courses' ? (
-        <div className="courses-grid">
-          {filteredCourses.map(c => (
-            <div key={c.id} className="course-card glass-panel" onClick={() => setSelectedCourse(c)}>
-              <div className="course-card-head">
-                <span className="course-card-code">{c.code}</span>
-                <h3>{c.name}</h3>
-                <p>{c.teacher}</p>
-              </div>
+        filteredCourses.length > 0 ? (
+          <div className="courses-grid">
+            {filteredCourses.map(c => (
+              <div key={c.id} className="course-card glass-panel" onClick={() => setSelectedCourse(c)}>
+                <div className="course-card-head">
+                  <span className="course-card-code">{c.code}</span>
+                  <h3>{c.name}</h3>
+                  <p>{c.teacher}</p>
+                </div>
 
-              <div className="course-card-footer">
-                {isStudent ? (
-                  <>
-                    <div className="progress-container">
-                      <div className="progress-bar-track">
-                        <div className="progress-bar-fill" style={{ width: `${c.progress}%` }}></div>
+                <div className="course-card-footer">
+                  {isStudent ? (
+                    <>
+                      <div className="progress-container">
+                        <div className="progress-bar-track">
+                          <div className="progress-bar-fill" style={{ width: `${c.progress}%` }}></div>
+                        </div>
+                        <span className="progress-text">{c.progress}% bài học</span>
                       </div>
-                      <span className="progress-text">{c.progress}% bài học</span>
+                      <span className="materials-badge">{c.materialsCount} tài liệu</span>
+                    </>
+                  ) : (
+                    <div className="course-mgmt-stats">
+                      <div className="mgmt-stat">
+                        <Users size={13} />
+                        <span>{c.studentCount}</span>
+                        <small>học viên</small>
+                      </div>
+                      <div className="mgmt-stat">
+                        <UserCheck size={13} />
+                        <span>{c.attendanceRate}%</span>
+                        <small>chuyên cần</small>
+                      </div>
+                      <div className="mgmt-stat">
+                        <BookOpen size={13} />
+                        <span>{c.sessionsDone}/{c.sessionsTotal}</span>
+                        <small>buổi</small>
+                      </div>
                     </div>
-                    <span className="materials-badge">{c.materialsCount} tài liệu</span>
-                  </>
-                ) : (
-                  <div className="course-mgmt-stats">
-                    <div className="mgmt-stat">
-                      <Users size={13} />
-                      <span>{c.studentCount}</span>
-                      <small>học viên</small>
-                    </div>
-                    <div className="mgmt-stat">
-                      <UserCheck size={13} />
-                      <span>{c.attendanceRate}%</span>
-                      <small>chuyên cần</small>
-                    </div>
-                    <div className="mgmt-stat">
-                      <BookOpen size={13} />
-                      <span>{c.sessionsDone}/{c.sessionsTotal}</span>
-                      <small>buổi</small>
-                    </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
+            ))}
+          </div>
+        ) : (
+          <div className="empty-courses-state animate-fade-in">
+            <div className="empty-state-icon-box">
+              <BookOpen size={36} />
             </div>
-          ))}
-        </div>
+            <h4>{searchQuery ? 'Không tìm thấy lớp học phù hợp' : 'Bạn chưa được phân công lớp học nào'}</h4>
+            <p>
+              {searchQuery
+                ? 'Vui lòng kiểm tra lại tên hoặc mã môn học và thử lại.'
+                : 'Khi quản trị viên phân bổ lớp học cho tài khoản của bạn, các lớp học tương ứng sẽ xuất hiện tại đây.'}
+            </p>
+          </div>
+        )
       ) : (
         <section className="materials-section glass-panel">
           <div className="personal-materials-header">
@@ -629,7 +687,17 @@ export const CoursesPage: React.FC = () => {
                 </div>
                 <div className="material-actions">
                   <a 
-                    href={`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}${m.filePath}`}
+                    href={`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}${m.filePath}?view=true&token=${token}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="download-btn-icon view-btn"
+                    title="Xem tài liệu"
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <Eye size={14} />
+                  </a>
+                  <a 
+                    href={`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}${m.filePath}?token=${token}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="download-btn-icon"
@@ -638,6 +706,15 @@ export const CoursesPage: React.FC = () => {
                   >
                     <Download size={14} />
                   </a>
+                  {canShareMaterials && (
+                    <button 
+                      className="download-btn-icon share-btn" 
+                      title="Chia sẻ vào khóa học"
+                      onClick={() => setShareMaterialId(m.id)}
+                    >
+                      <Share2 size={14} />
+                    </button>
+                  )}
                   <button 
                     className="delete-btn-icon text-danger" 
                     title="Xóa tài liệu"
@@ -650,8 +727,23 @@ export const CoursesPage: React.FC = () => {
             ))}
 
             {filteredPersonalMaterials.length === 0 && (
-              <div className="no-materials">
-                {searchQuery ? 'Không tìm thấy tài liệu phù hợp.' : 'Kho tài liệu cá nhân của bạn hiện đang trống.'}
+              <div className="empty-materials-state animate-fade-in">
+                <div className="empty-state-icon-box">
+                  <Folder size={36} />
+                </div>
+                <h4>{searchQuery ? 'Không tìm thấy tài liệu phù hợp' : `Kho tài liệu cá nhân của ${pronoun} đang trống`}</h4>
+                <p>
+                  {searchQuery 
+                    ? 'Hãy thử tìm kiếm với các từ khóa khác.'
+                    : 'Tải lên bài giảng, PDF, slide hoặc hình ảnh để quản lý tập trung và an toàn hơn.'}
+                </p>
+                {!searchQuery && (
+                  <button className="upload-btn primary-cta-btn" onClick={() => setShowUploadModal(true)} style={{ margin: '1rem auto 0' }}>
+                    <Plus size={16} />
+                    <Upload size={14} />
+                    <span>Tải tài liệu lên</span>
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -757,6 +849,58 @@ export const CoursesPage: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Modal chia sẻ tài liệu vào khóa học */}
+      {shareMaterialId && createPortal(
+        <div className="modal-overlay animate-fade-in" onClick={() => setShareMaterialId(null)}>
+          <div className="modal-content glass-panel animate-scale-in" onClick={e => e.stopPropagation()} style={{ maxWidth: '440px' }}>
+            <div className="modal-header">
+              <h3>Chia sẻ tài liệu vào khóa học</h3>
+              <button className="close-btn-icon" onClick={() => setShareMaterialId(null)} title="Đóng">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="share-course-list" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', margin: '1rem 0', maxHeight: '300px', overflowY: 'auto', paddingRight: '4px' }}>
+              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', lineHeight: '1.4' }}>
+                Chọn một khóa học dưới đây để chia sẻ tài liệu này. Tất cả học sinh và giáo viên thuộc khóa học sẽ được quyền đọc/tải tài liệu.
+              </p>
+              {scopedCourses.map(c => (
+                <button 
+                  key={c.id} 
+                  type="button"
+                  className="share-course-item-row"
+                  onClick={async () => {
+                    try {
+                      await api.shareMaterial(shareMaterialId, c.id);
+                      alert(`Chia sẻ thành công tài liệu vào khóa học: ${c.name} 🎉`);
+                      setShareMaterialId(null);
+                      await refreshLmsData();
+                    } catch (err) {
+                      alert('Không thể chia sẻ tài liệu: ' + (err instanceof Error ? err.message : String(err)));
+                    }
+                  }}
+                >
+                  <div style={{ textAlign: 'left' }}>
+                    <strong style={{ fontSize: '0.88rem', display: 'block', color: 'var(--text-primary)' }}>{c.name}</strong>
+                    <small style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Mã lớp: {c.code} • Giáo viên: {c.teacher}</small>
+                  </div>
+                </button>
+              ))}
+              {scopedCourses.length === 0 && (
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center', padding: '1rem' }}>
+                  {capitalizedPronoun} chưa tham gia hay quản lý khóa học nào để thực hiện chia sẻ.
+                </p>
+              )}
+            </div>
+            <div className="modal-actions-footer" style={{ marginTop: '1rem' }}>
+              <button type="button" className="cancel-btn" onClick={() => setShareMaterialId(null)} style={{ width: '100%' }}>
+                Đóng
+              </button>
+            </div>
           </div>
         </div>,
         document.body

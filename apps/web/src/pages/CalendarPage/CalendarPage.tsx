@@ -178,27 +178,28 @@ export const CalendarPage: React.FC = () => {
       return;
     }
 
-    // Kiểm tra lịch học không được trong quá khứ
+    // Kiểm tra lịch học không được trong quá khứ (chỉ áp dụng khi tạo lịch học mới)
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
-    
-    if (date < todayStr) {
-      alert('Không thể tạo hoặc cập nhật lịch học trong quá khứ.');
-      return;
-    }
-    
-    if (date === todayStr) {
-      const timeMatch = time.match(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]/);
-      if (timeMatch) {
-        const startTimeStr = timeMatch[0];
-        const [hours, minutes] = startTimeStr.split(':').map(Number);
-        
-        const scheduleDateTime = new Date();
-        scheduleDateTime.setHours(hours, minutes, 0, 0);
-        
-        if (scheduleDateTime <= now) {
-          alert('Giờ bắt đầu của lịch học phải lớn hơn thời điểm hiện tại.');
-          return;
+    if (!editClass) {
+      if (date < todayStr) {
+        alert('Không thể tạo lịch học trong quá khứ.');
+        return;
+      }
+      
+      if (date === todayStr) {
+        const timeMatch = time.match(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]/);
+        if (timeMatch) {
+          const startTimeStr = timeMatch[0];
+          const [hours, minutes] = startTimeStr.split(':').map(Number);
+          
+          const scheduleDateTime = new Date();
+          scheduleDateTime.setHours(hours, minutes, 0, 0);
+          
+          if (scheduleDateTime <= now) {
+            alert('Giờ bắt đầu của lịch học phải lớn hơn thời điểm hiện tại.');
+            return;
+          }
         }
       }
     }
@@ -236,20 +237,47 @@ export const CalendarPage: React.FC = () => {
     'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'
   ];
 
+  // Calculate the total classes scheduled in the current month
+  const currentMonthEventsCount = classes.filter(cls => {
+    if (!cls.date) return false;
+    const [y, m] = cls.date.split('-').map(Number);
+    return y === year && m === (month + 1);
+  }).length;
+
   return (
     <div className="calendar-page-container">
+      {/* Background decoration SVG */}
+      <div className="calendar-decoration-svg">
+        <svg viewBox="0 0 300 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M30,160 C90,90 150,190 220,110 T300,140" stroke="url(#cal-grad)" strokeWidth="1.5" strokeDasharray="6 6" fill="none" />
+          <circle cx="210" cy="70" r="20" stroke="url(#cal-grad)" strokeWidth="1" fill="none" />
+          <circle cx="80" cy="110" r="8" stroke="url(#cal-grad)" strokeWidth="1" fill="none" />
+          <defs>
+            <linearGradient id="cal-grad" x1="0" y1="0" x2="300" y2="200" gradientUnits="userSpaceOnUse">
+              <stop stopColor="#6366f1" />
+              <stop offset="1" stopColor="#a855f7" />
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+
       {/* Cột Trái: Lưới Lịch biểu */}
       <div className="calendar-grid-wrapper">
         <div className="calendar-header-bar">
           <div className="calendar-nav">
             <button className="calendar-nav-btn" onClick={prevMonth} title="Tháng trước">
-              <ChevronLeft size={16} />
+              <ChevronLeft size={18} />
             </button>
-            <span className="calendar-month-title">
-              {monthNames[month]} {year}
-            </span>
+            <div className="calendar-month-info">
+              <span className="calendar-month-title">
+                {monthNames[month]} {year}
+              </span>
+              <span className="calendar-month-subtitle">
+                {currentMonthEventsCount} buổi học được lên lịch
+              </span>
+            </div>
             <button className="calendar-nav-btn" onClick={nextMonth} title="Tháng sau">
-              <ChevronRight size={16} />
+              <ChevronRight size={18} />
             </button>
           </div>
           {isEditable && (
@@ -278,21 +306,29 @@ export const CalendarPage: React.FC = () => {
                 onClick={() => cell.isCurrentMonth && setSelectedDate(cell.date)}
                 className={`calendar-cell ${!cell.isCurrentMonth ? 'other-month' : ''} ${cell.isToday ? 'today' : ''} ${cell.isSelected ? 'selected' : ''}`}
               >
-                <span className="cell-day-number">{cell.day}</span>
+                <span className="cell-day-number">
+                  {cell.day}
+                  {cell.isToday && <span className="today-marker-dot" title="Hôm nay"></span>}
+                </span>
                 
                 {/* Event previews inside cell (hiển thị tối đa 2 sự kiện trên grid để tránh tràn) */}
                 <div className="cell-event-preview-list">
-                  {cell.events.slice(0, 2).map(ev => (
-                    <div 
-                      key={ev.id} 
-                      className={`cell-event-preview-badge ${ev.status === 'live' ? 'live' : ''}`}
-                      title={`${ev.time}: ${ev.subject}`}
-                    >
-                      {ev.subject}
-                    </div>
-                  ))}
+                  {cell.events.slice(0, 2).map(ev => {
+                    const todayStr = getTodayDateStr();
+                    const isPast = ev.date < todayStr;
+                    const statusClass = isPast ? 'ended' : ev.status;
+                    return (
+                      <div 
+                        key={ev.id} 
+                        className={`cell-event-preview-badge ${statusClass}`}
+                        title={`${ev.time}: ${ev.subject}`}
+                      >
+                        {ev.subject}
+                      </div>
+                    );
+                  })}
                   {cell.events.length > 2 && (
-                    <div className="cell-event-preview-badge" style={{ borderLeft: 'none', background: 'rgba(255,255,255,0.05)', textAlign: 'center', fontWeight: 'bold' }}>
+                    <div className="cell-event-preview-badge remaining-count" style={{ borderLeft: 'none', background: 'rgba(255,255,255,0.05)', textAlign: 'center', fontWeight: 'bold' }}>
                       +{cell.events.length - 2} lớp
                     </div>
                   )}
@@ -337,7 +373,7 @@ export const CalendarPage: React.FC = () => {
                     className="sidebar-join-btn animate-pulse-light"
                   >
                     <span>Vào lớp học</span>
-                    <ArrowRight size={12} />
+                    <ArrowRight size={14} />
                   </button>
                 ) : (
                   <span className="wait-badge" style={{ fontSize: '0.7rem' }}>Chờ đến giờ học</span>
@@ -357,16 +393,22 @@ export const CalendarPage: React.FC = () => {
             </div>
           ))}
 
-          {selectedDayClasses.length === 0 && (
-            <div className="sidebar-no-classes">
-              <CalendarDays className="sidebar-no-classes-icon" size={36} />
-              <p>Không có lịch học nào được sắp xếp cho ngày này.</p>
+          {selectedDayClasses.length === 0 ? (
+            <div className="sidebar-no-classes animate-fade-in">
+              <CalendarDays className="sidebar-no-classes-icon animate-float" size={40} />
+              <h4>Không có lịch học</h4>
+              <p>Không có lịch học nào được sắp xếp cho ngày này. Hãy nghỉ ngơi hoặc xem lịch ngày khác nhé! ☕</p>
               {isEditable && (
                 <button className="quick-add-btn" onClick={() => handleOpenModal(null, selectedDateStr)}>
                   <Plus size={14} />
                   <span>Thêm lớp nhanh</span>
                 </button>
               )}
+            </div>
+          ) : (
+            <div className="sidebar-day-summary">
+              <span className="summary-pill">Tổng số buổi: {selectedDayClasses.length}</span>
+              <span className="summary-pill">Thời gian dạy: {selectedDayClasses.length * 1.5} giờ</span>
             </div>
           )}
         </div>

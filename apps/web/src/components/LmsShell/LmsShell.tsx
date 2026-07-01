@@ -16,6 +16,24 @@ export const LmsShell: React.FC = () => {
   const { activePage, setActivePage, theme, toggleTheme } = useClass();
   const { user, logout } = useAuth();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+  React.useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth <= 768) {
+        setIsSidebarCollapsed(true);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Chạy lần đầu khi mount
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Format current date: Thứ [Day] • DD/MM/YYYY
+  const dateStr = React.useMemo(() => {
+    const weekdays = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+    const now = new Date();
+    return `${weekdays[now.getDay()]} • ${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+  }, []);
   
   const userName = user?.name || '';
   const role = user?.role || 'student';
@@ -57,6 +75,14 @@ export const LmsShell: React.FC = () => {
       {/* Background glow orbs */}
       <div className="glow-orb glow-orb-primary"></div>
       <div className="glow-orb glow-orb-purple"></div>
+
+      {/* Backdrop click-outside close for mobile */}
+      {!isSidebarCollapsed && (
+        <div 
+          className="sidebar-backdrop" 
+          onClick={() => setIsSidebarCollapsed(true)} 
+        />
+      )}
 
       {/* Sidebar Navigation */}
       <aside className={`lms-sidebar glass-panel ${isSidebarCollapsed ? 'collapsed' : ''}`}>
@@ -181,14 +207,20 @@ export const LmsShell: React.FC = () => {
             </span>
           </div>
 
-          <div className="header-actions" style={{ display: 'flex', gap: '0.75rem' }}>
-            <button onClick={toggleTheme} className="icon-action-btn" title={theme === 'dark' ? "Chế độ sáng" : "Chế độ tối"}>
-              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
-            <button className="icon-action-btn" title="Thông báo">
-              <Bell size={18} />
-              <span className="bell-badge"></span>
-            </button>
+          <div className="header-actions">
+            <div className="header-date">
+              <span>{dateStr}</span>
+            </div>
+            
+            <div className="header-icon-group">
+              <button onClick={toggleTheme} className="icon-action-btn" title={theme === 'dark' ? "Chế độ sáng" : "Chế độ tối"}>
+                {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+              </button>
+              <button className="icon-action-btn" title="Thông báo">
+                <Bell size={18} />
+                <span className="bell-badge"></span>
+              </button>
+            </div>
           </div>
         </header>
 

@@ -369,3 +369,55 @@
     transform: scale(1.1);
   }
 }
+
+@media (max-width: 768px) {
+  .classroom-container {
+    padding: 0.35rem 0.35rem calc(5.5rem + env(safe-area-inset-bottom, 0px)) 0.35rem;
+  }
+  
+  .classroom-header-bar {
+    padding: 0.25rem 0.5rem;
+    height: auto;
+    min-height: 44px;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .class-info {
+    gap: 0.4rem;
+  }
+  
+  .class-titles h2 {
+    font-size: 0.95rem;
+  }
+  
+  .class-titles p {
+    font-size: 0.65rem;
+  }
+  
+  .class-status-indicators {
+    gap: 0.5rem;
+  }
+  
+  .status-item {
+    font-size: 0.7rem;
+    gap: 0.25rem;
+  }
+
+  .timer-badge {
+    padding: 0.2rem 0.4rem;
+    font-size: 0.7rem;
+  }
+  
+  .diagnostic-alerts-container {
+    right: 0.5rem;
+    left: 0.5rem;
+    max-width: none;
+    top: 55px;
+  }
+  
+  .diagnostic-alert-card {
+    padding: 0.5rem;
+    font-size: 0.75rem;
+  }
+}

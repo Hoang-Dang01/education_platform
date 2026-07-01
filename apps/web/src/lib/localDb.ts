@@ -159,36 +159,8 @@ export interface ScheduledClass {
 
 const STORAGE_KEY_SCHEDULE = 'edumeet_scheduled_classes';
 
-// Lấy ngày hôm nay định dạng YYYY-MM-DD
-const getTodayDateStr = () => new Date().toISOString().split('T')[0];
-// Lấy ngày mai định dạng YYYY-MM-DD
-const getTomorrowDateStr = () => {
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  return tomorrow.toISOString().split('T')[0];
-};
-
 // Mock ban đầu nếu chưa có lịch học nào lưu dưới local
-const MOCK_INITIAL_CLASSES: ScheduledClass[] = [
-  {
-    id: 'c1',
-    subject: 'Toán Học Giải Tích 12',
-    time: '10:00 - 11:30',
-    date: getTodayDateStr(),
-    teacher: 'Thầy Nguyễn Hải Nam',
-    room: 'toan-tin-k12',
-    status: 'live',
-  },
-  {
-    id: 'c2',
-    subject: 'Vật Lý Đại Cương',
-    time: '14:00 - 15:30',
-    date: getTomorrowDateStr(),
-    teacher: 'Cô Lê Thu Thảo',
-    room: 'vat-ly-12',
-    status: 'scheduled',
-  },
-];
+const MOCK_INITIAL_CLASSES: ScheduledClass[] = [];
 
 export function getScheduledClasses(): ScheduledClass[] {
   try {

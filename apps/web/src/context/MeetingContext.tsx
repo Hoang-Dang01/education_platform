@@ -417,7 +417,7 @@ export const MeetingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         networkLabel: localDevice.networkLabel
       };
 
-      const isKnownMock = ['session-math-live', 'session-phys', 'session-chem', 'session-java', 'lc1', 'lc2', 'lc3'].includes(sessId) || sessId.startsWith('mock-') || sessId.startsWith('class-');
+      const isKnownMock = ['session-math-live', 'session-phys', 'session-chem', 'session-java', 'lc1', 'lc2', 'lc3'].includes(sessId) || sessId.startsWith('mock-');
       if (isMockMode() || isKnownMock) {
         console.log('[MOCK MODE] Activating mock mode for room:', sessId);
         // Derive a friendly display name from the session ID slug

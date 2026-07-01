@@ -1,46 +1,93 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
-import { KeyRound, Eye, EyeOff, Loader2, Sparkles, Check, X, ShieldAlert } from 'lucide-react';
+import {
+  KeyRound,
+  Eye,
+  EyeOff,
+  Loader2,
+  Check,
+  X,
+  ShieldAlert,
+} from 'lucide-react';
 import './ForceChangePasswordPage.css';
 
 export const ForceChangePasswordPage: React.FC = () => {
   const { user, updatePasswordChanged, logout } = useAuth();
-  const [oldPassword, setOldPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+
+  const getPronoun = (name: string): string => {
+    const normalized = name.toLowerCase().trim();
+    if (normalized.startsWith('cô') || normalized.includes(' cô ')) return 'cô';
+    if (normalized.startsWith('thầy') || normalized.includes(' thầy ')) return 'thầy';
+    return 'bạn';
+  };
+  const pronoun = getPronoun(user?.name || '');
+
+  const [form, setForm] = useState({
+    oldPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  // Password requirements validation state
-  const hasMinLength = newPassword.length >= 8;
-  const hasUppercase = /[A-Z]/.test(newPassword);
-  const hasLowercase = /[a-z]/.test(newPassword);
-  const hasNumber = /\d/.test(newPassword);
+  const passwordRules = useMemo(() => {
+    const rules = [
+      {
+        label: 'Ít nhất 8 ký tự',
+        valid: form.newPassword.length >= 8,
+      },
+      {
+        label: 'Ít nhất 1 chữ in hoa (A-Z)',
+        valid: /[A-Z]/.test(form.newPassword),
+      },
+      {
+        label: 'Ít nhất 1 chữ thường (a-z)',
+        valid: /[a-z]/.test(form.newPassword),
+      },
+      {
+        label: 'Ít nhất 1 chữ số (0-9)',
+        valid: /\d/.test(form.newPassword),
+      },
+    ];
 
-  const isValidPassword = hasMinLength && hasUppercase && hasLowercase && hasNumber;
+    return rules;
+  }, [form.newPassword]);
+
+  const isValidPassword = passwordRules.every(rule => rule.valid);
+  const passwordsMatch =
+    form.confirmPassword.length > 0 &&
+    form.confirmPassword === form.newPassword;
+
+  const updateField = (key: keyof typeof form, value: string) => {
+    setForm(prev => ({ ...prev, [key]: value }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const { oldPassword, newPassword, confirmPassword } = form;
+
     if (!oldPassword || !newPassword || !confirmPassword) {
-      setError('Vui lòng điền đầy đủ các thông tin.');
+      setError('Vui lòng nhập đầy đủ thông tin.');
       return;
     }
 
     if (!isValidPassword) {
-      setError('Mật khẩu mới không đáp ứng đủ yêu cầu chính sách bảo mật.');
+      setError('Mật khẩu chưa đạt yêu cầu bảo mật.');
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setError('Mật khẩu xác nhận không khớp với mật khẩu mới.');
+      setError('Mật khẩu xác nhận không khớp.');
       return;
     }
 
     if (oldPassword === newPassword) {
-      setError('Mật khẩu mới phải khác mật khẩu hiện tại.');
+      setError('Mật khẩu mới phải khác mật khẩu cũ.');
       return;
     }
 
@@ -49,151 +96,142 @@ export const ForceChangePasswordPage: React.FC = () => {
 
     try {
       await api.changePassword({ oldPassword, newPassword });
+
       setSuccess(true);
+
       setTimeout(() => {
-        // Unlock dashboard inside context
         updatePasswordChanged();
-      }, 1500);
+      }, 1200);
     } catch (err: any) {
-      setError(err.message || 'Lỗi khi cập nhật mật khẩu mới.');
+      setError(err.message || 'Không thể cập nhật mật khẩu.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="force-change-container">
-      {/* Moving background orbs */}
-      <div className="glow-orb glow-orb-primary animate-float"></div>
-      <div className="glow-orb glow-orb-purple"></div>
+    <div className="force-page">
+      <div className="orb orb-1" />
+      <div className="orb orb-2" />
 
-      <div className="force-card-wrapper">
-        <header className="force-header">
-          <div className="logo">
-            <KeyRound className="logo-icon" />
+      <div className="force-shell">
+        <header className="topbar">
+          <div className="brand">
+            <KeyRound size={24} />
             <span>EduMeet</span>
-          </div>
-          <div className="badge">
-            <Sparkles size={14} className="badge-icon" />
-            <span>Bảo mật tài khoản</span>
           </div>
         </header>
 
-        <main className="force-main glass-panel">
-          <div className="force-head">
-            <h2>Kích hoạt tài khoản mới</h2>
-            <p>Chào mừng <strong>{user?.name}</strong>. Vì đây là lần đầu tiên bạn đăng nhập bằng mật khẩu tạm, bạn cần đổi mật khẩu mới để tiếp tục.</p>
-          </div>
+        <main className="force-card">
+          <section className="hero">
+            <h1>Chào mừng, {user?.name} 👋</h1>
+            <p>
+              Đây là lần đầu {pronoun} đăng nhập bằng mật khẩu tạm thời.
+              Vui lòng thiết lập mật khẩu mới để kích hoạt và bảo mật tài khoản.
+            </p>
+          </section>
 
           {error && (
-            <div className="error-banner">
+            <div className="banner error">
               <ShieldAlert size={16} />
               <span>{error}</span>
             </div>
           )}
 
           {success && (
-            <div className="success-banner">
+            <div className="banner success">
               <Check size={16} />
-              <span>Cập nhật mật khẩu thành công! Đang chuyển hướng...</span>
+              <span>Cập nhật thành công! Đang chuyển hướng...</span>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="force-form">
-            <div className="input-group">
-              <label htmlFor="oldPassword">Mật khẩu tạm thời (Hiện tại)</label>
-              <div className="input-wrapper">
-                <input
-                  id="oldPassword"
-                  type="password"
-                  placeholder="Nhập mật khẩu tạm thời..."
-                  value={oldPassword}
-                  onChange={e => setOldPassword(e.target.value)}
-                  disabled={loading || success}
-                  required
-                />
-              </div>
-            </div>
+          <form className="password-form" onSubmit={handleSubmit} spellCheck={false}>
+            <Field label="Mật khẩu tạm thời">
+              <input
+                type="password"
+                value={form.oldPassword}
+                onChange={e => updateField('oldPassword', e.target.value)}
+                placeholder="Nhập mật khẩu tạm thời..."
+                disabled={loading || success}
+                spellCheck={false}
+              />
+            </Field>
 
-            <div className="input-group">
-              <label htmlFor="newPassword">Mật khẩu bảo mật mới</label>
-              <div className="input-wrapper">
+            <Field label="Mật khẩu mới">
+              <div className="input-with-icon">
                 <input
-                  id="newPassword"
-                  type={showPassword ? 'text' : 'password'}
+                  type={showNewPassword ? 'text' : 'password'}
+                  value={form.newPassword}
+                  onChange={e => updateField('newPassword', e.target.value)}
                   placeholder="Nhập mật khẩu mới..."
-                  value={newPassword}
-                  onChange={e => setNewPassword(e.target.value)}
                   disabled={loading || success}
-                  required
+                  spellCheck={false}
                 />
+
                 <button
                   type="button"
-                  onClick={() => setShowPassword(prev => !prev)}
-                  className="password-toggle-btn"
-                  disabled={loading || success}
+                  className="toggle-btn"
+                  onClick={() => setShowNewPassword(v => !v)}
                 >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
-            </div>
 
-            {/* Password checklist rules */}
-            <div className="password-policy-list">
-              <div className={`policy-item ${hasMinLength ? 'valid' : 'invalid'}`}>
-                {hasMinLength ? <Check size={12} /> : <X size={12} />}
-                <span>Ít nhất 8 ký tự</span>
+              <div className="policy-box">
+                {passwordRules.map(rule => (
+                  <div
+                    key={rule.label}
+                    className={`policy-item ${rule.valid ? 'valid' : 'invalid'}`}
+                  >
+                    {rule.valid ? <Check size={14} /> : <X size={14} />}
+                    <span>{rule.label}</span>
+                  </div>
+                ))}
               </div>
-              <div className={`policy-item ${hasUppercase ? 'valid' : 'invalid'}`}>
-                {hasUppercase ? <Check size={12} /> : <X size={12} />}
-                <span>Ít nhất 1 chữ in hoa (A-Z)</span>
-              </div>
-              <div className={`policy-item ${hasLowercase ? 'valid' : 'invalid'}`}>
-                {hasLowercase ? <Check size={12} /> : <X size={12} />}
-                <span>Ít nhất 1 chữ thường (a-z)</span>
-              </div>
-              <div className={`policy-item ${hasNumber ? 'valid' : 'invalid'}`}>
-                {hasNumber ? <Check size={12} /> : <X size={12} />}
-                <span>Ít nhất 1 chữ số (0-9)</span>
-              </div>
-            </div>
+            </Field>
 
-            <div className="input-group">
-              <label htmlFor="confirmPassword">Xác nhận mật khẩu mới</label>
-              <div className="input-wrapper">
-                <input
-                  id="confirmPassword"
-                  type="password"
-                  placeholder="Nhập lại mật khẩu mới..."
-                  value={confirmPassword}
-                  onChange={e => setConfirmPassword(e.target.value)}
-                  disabled={loading || success}
-                  required
-                />
-              </div>
-            </div>
+            <Field label="Xác nhận mật khẩu">
+              <input
+                type="password"
+                value={form.confirmPassword}
+                onChange={e =>
+                  updateField('confirmPassword', e.target.value)
+                }
+                placeholder="Nhập lại mật khẩu..."
+                disabled={loading || success}
+                spellCheck={false}
+              />
+              {form.confirmPassword && (
+                <small className={passwordsMatch ? 'match' : 'mismatch'}>
+                  {passwordsMatch
+                    ? '✓ Mật khẩu khớp'
+                    : '✗ Mật khẩu chưa khớp'}
+                </small>
+              )}
+            </Field>
 
-            <div className="form-actions">
+            <div className="actions">
               <button
                 type="button"
-                className="logout-btn"
+                className="secondary-btn"
                 onClick={logout}
-                disabled={loading || success}
+                disabled={loading}
               >
-                Hủy & Đăng xuất
+                Đăng xuất
               </button>
+
               <button
                 type="submit"
-                className="submit-btn"
+                className="primary-btn"
                 disabled={loading || success || !isValidPassword}
               >
                 {loading ? (
                   <>
-                    <span>Đang cập nhật...</span>
                     <Loader2 className="animate-spin" size={16} />
+                    <span>Đang cập nhật...</span>
                   </>
                 ) : (
-                  <span>Kích hoạt tài khoản</span>
+                  'Kích hoạt tài khoản'
                 )}
               </button>
             </div>
@@ -203,3 +241,15 @@ export const ForceChangePasswordPage: React.FC = () => {
     </div>
   );
 };
+
+type FieldProps = {
+  label: string;
+  children: React.ReactNode;
+};
+
+const Field = ({ label, children }: FieldProps) => (
+  <div className="field">
+    <label>{label}</label>
+    {children}
+  </div>
+);

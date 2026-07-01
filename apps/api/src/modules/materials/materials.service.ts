@@ -127,6 +127,54 @@ export class MaterialsService {
     return { success: true };
   }
 
+  async shareMaterial(id: string, courseId: string, userId: string, role: string) {
+    const material = await this.prisma.courseMaterial.findUnique({
+      where: { id },
+    });
+    if (!material || material.isDeleted) {
+      throw new NotFoundException('Không tìm thấy tài liệu.');
+    }
+    if (material.uploadedById !== userId && role !== 'admin') {
+      throw new ForbiddenException('Bạn không có quyền chia sẻ tài liệu này.');
+    }
+    
+    // Check permission for target course
+    if (role === 'teacher') {
+      const hasAccess = await this.prisma.class.findFirst({
+        where: {
+          courseId,
+          teacherId: userId,
+        },
+      });
+      if (!hasAccess) {
+        throw new ForbiddenException('Bạn không giảng dạy khóa học này nên không thể chia sẻ.');
+      }
+    }
+
+    // Clone the material with course scope
+    const newId = crypto.randomUUID();
+    const diskPath = path.join(this.uploadDir, id);
+    const newDiskPath = path.join(this.uploadDir, newId);
+    
+    // Copy the physical file
+    fs.copyFileSync(diskPath, newDiskPath);
+
+    return this.prisma.courseMaterial.create({
+      data: {
+        id: newId,
+        title: material.title,
+        fileName: material.fileName,
+        fileType: material.fileType,
+        fileSize: material.fileSize,
+        filePath: `/materials/download/${newId}`,
+        uploadedById: userId,
+        isPrivate: false,
+        scope: MaterialScope.course,
+        courseId,
+      },
+    });
+  }
+
   private formatFileSize(bytes: number): string {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;

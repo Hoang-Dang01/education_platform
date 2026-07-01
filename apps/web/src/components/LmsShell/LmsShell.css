@@ -15,7 +15,7 @@
   border-radius: 0;
   border: none;
   border-right: 1px solid var(--glass-border);
-  background: var(--glass-bg);
+  background: linear-gradient(180deg, var(--glass-bg) 0%, rgba(20, 26, 46, 0.45) 100%);
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
@@ -23,6 +23,10 @@
   z-index: 1;
   position: relative;
   transition: width var(--transition-normal), padding var(--transition-normal);
+}
+
+:root[data-theme="light"] .lms-sidebar {
+  background: linear-gradient(180deg, #ffffff 0%, #f8faff 100%);
 }
 
 .sidebar-logo {
@@ -77,8 +81,8 @@
 }
 
 .nav-item.active {
-  background: linear-gradient(135deg, rgba(79, 70, 229, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
-  border-color: rgba(99, 102, 241, 0.15);
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.15);
   color: var(--color-primary-light);
   box-shadow: 0 4px 15px rgba(99, 102, 241, 0.05);
 }
@@ -87,12 +91,17 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem;
+  padding: 14px 16px;
   border-radius: 12px;
   background: var(--glass-bg-hover);
   border: 1px solid var(--glass-border);
   width: 100%;
   transition: all var(--transition-normal);
+}
+
+.sidebar-user-card:hover {
+  border-color: rgba(99, 102, 241, 0.25);
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.08);
 }
 
 .user-info-section {
@@ -276,6 +285,25 @@
 .header-actions {
   display: flex;
   align-items: center;
+  gap: 1.25rem;
+}
+
+.header-icon-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.header-date {
+  font-size: 0.8rem;
+  font-weight: 650;
+  color: var(--text-secondary);
+  background: var(--glass-bg-hover);
+  padding: 0.4rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid var(--glass-border);
+  font-family: var(--font-title);
+  letter-spacing: 0.02em;
 }
 
 .icon-action-btn {
@@ -317,4 +345,104 @@
   overflow-y: auto;
   position: relative;
   padding-right: 0.25rem;
+}
+
+@media (max-width: 768px) {
+  /* Hộp chứa chính */
+  .lms-shell {
+    flex-direction: column;
+  }
+
+  /* Sidebar chuyển thành dạng trượt (Drawer) */
+  .lms-sidebar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 270px;
+    height: 100%;
+    z-index: 999;
+    transform: translateX(0); /* Mặc định mở rộng khi không collapsed */
+    box-shadow: 5px 0 25px rgba(0, 0, 0, 0.5);
+  }
+
+  /* Khi collapsed trên điện thoại thì trượt ẩn hoàn toàn */
+  .lms-sidebar.collapsed {
+    transform: translateX(-100%);
+    width: 270px; /* Vẫn giữ nguyên chiều rộng để nội dung không bị méo khi trượt */
+    padding: 1.5rem;
+  }
+
+  /* Thay đổi vị trí nút toggle để luôn hiển thị ở mép sidebar hoặc nổi ở mép màn hình */
+  .sidebar-toggle-btn {
+    right: -42px; /* Đẩy ra xa hơn để dễ chạm trên mobile */
+    top: 20px;
+    background: var(--bg-secondary);
+    border-color: var(--glass-border);
+  }
+
+  /* Khi collapsed thì nút toggle vẫn hiển thị ở mép trái màn hình để người dùng gọi ra */
+  .lms-sidebar.collapsed .sidebar-toggle-btn {
+    right: -42px;
+    position: absolute;
+  }
+
+  /* Không ẩn các phần tử văn bản trong sidebar khi collapsed ở mobile nữa (vì nó ẩn nguyên sidebar rồi) */
+  .lms-sidebar.collapsed .sidebar-logo span,
+  .lms-sidebar.collapsed .nav-item span,
+  .lms-sidebar.collapsed .user-info {
+    opacity: 1;
+    max-width: 200px;
+  }
+
+  /* Tương tự, phần user card giữ nguyên dạng đầy đủ */
+  .lms-sidebar.collapsed .sidebar-user-card {
+    padding: 0.75rem;
+    flex-direction: row;
+    gap: 0.75rem;
+    align-items: center;
+    background: var(--glass-bg-hover);
+    border-color: var(--glass-border);
+  }
+  
+  .lms-sidebar.collapsed .user-info-section {
+    gap: 0.75rem;
+  }
+
+  .lms-sidebar.collapsed .nav-item {
+    padding: 0.875rem 1rem;
+    justify-content: flex-start;
+    gap: 0.75rem;
+  }
+
+  /* Backdrop click-outside close cho mobile */
+  .sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 990; /* Nằm dưới Sidebar z-index: 999 */
+    animation: fadeIn 0.2s ease-out;
+  }
+
+  /* Content workspace */
+  .lms-main-content {
+    padding: 0.75rem;
+    width: 100vw;
+    height: 100%;
+  }
+
+  .lms-content-header {
+    padding: 0 0.5rem;
+    height: auto;
+    min-height: 50px;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .header-breadcrumbs {
+    font-size: 0.8rem;
+  }
 }

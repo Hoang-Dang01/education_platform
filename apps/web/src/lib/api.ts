@@ -92,6 +92,10 @@ export const api = {
     method: 'GET',
   }),
 
+  getDashboardStats: () => request<any>('/dashboard/stats', {
+    method: 'GET',
+  }),
+
   getHistorySessions: () => request<any[]>('/sessions/history', {
     method: 'GET',
   }),
@@ -150,5 +154,10 @@ export const api = {
 
   deleteMaterial: (id: string) => request<any>(`/materials/${id}`, {
     method: 'DELETE',
+  }),
+
+  shareMaterial: (id: string, courseId: string) => request<any>(`/materials/share/${id}`, {
+    method: 'POST',
+    body: JSON.stringify({ courseId }),
   }),
 };

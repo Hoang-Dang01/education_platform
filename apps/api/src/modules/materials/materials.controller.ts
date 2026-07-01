@@ -12,6 +12,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Body,
+  Query,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -139,7 +140,8 @@ export class MaterialsController {
   async downloadFile(
     @Param('id') id: string,
     @Req() req: any,
-    @Res() res: Response
+    @Res() res: Response,
+    @Query('view') view?: string
   ) {
     const userId = req.user.id;
     const role = req.user.role;
@@ -189,10 +191,12 @@ export class MaterialsController {
 
     // 3. Serve physical file
     const stream = await this.materialsService.getFileStream(id);
+    const isViewInline = view === 'true';
+    const disposition = isViewInline ? 'inline' : 'attachment';
     
     res.set({
       'Content-Type': this.getMimeType(material.fileName),
-      'Content-Disposition': `attachment; filename="${encodeURIComponent(material.fileName)}"`,
+      'Content-Disposition': `${disposition}; filename="${encodeURIComponent(material.fileName)}"`,
     });
 
     stream.pipe(res);
@@ -201,6 +205,23 @@ export class MaterialsController {
   @Delete(':id')
   async deleteMaterial(@Param('id') id: string, @Req() req: any) {
     return this.materialsService.deleteMaterial(id, req.user);
+  }
+
+  @Post('share/:id')
+  async shareMaterial(
+    @Param('id') id: string,
+    @Body('courseId') courseId: string,
+    @Req() req: any
+  ) {
+    if (!courseId || courseId.trim() === '') {
+      throw new BadRequestException('ID khóa học cần chia sẻ là bắt buộc.');
+    }
+    return this.materialsService.shareMaterial(
+      id,
+      courseId.trim(),
+      req.user.id,
+      req.user.role
+    );
   }
 
   private getMimeType(filename: string): string {

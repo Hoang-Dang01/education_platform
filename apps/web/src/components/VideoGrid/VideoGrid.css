@@ -422,3 +422,56 @@
   color: #f87171;
 }
 
+@media (max-width: 768px) {
+  .grid-cols-1 {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    max-width: 100%;
+  }
+  
+  .grid-cols-2 {
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(2, auto);
+    max-width: 100%;
+  }
+  
+  .layout-3 {
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(3, auto);
+    max-width: 100%;
+  }
+  
+  .layout-3 .video-card:last-child {
+    grid-column: auto;
+    width: 100%;
+  }
+  
+  .grid-cols-2-rows-2 {
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(4, auto);
+    max-width: 100%;
+  }
+  
+  .grid-cols-3-rows-2 {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(3, auto);
+    max-width: 100%;
+  }
+  
+  .grid-cols-4-rows-2 {
+    grid-template-columns: repeat(2, 1fr);
+    grid-auto-rows: auto;
+    max-width: 100%;
+  }
+
+  .grid-cols-auto {
+    grid-template-columns: 1fr;
+    grid-auto-rows: auto;
+    max-width: 100%;
+  }
+
+  .video-card {
+    aspect-ratio: 16 / 9;
+  }
+}
+

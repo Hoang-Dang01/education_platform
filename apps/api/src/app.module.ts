@@ -9,6 +9,7 @@ import { MeetingModule } from './modules/meeting/meeting.module';
 import { TelemetryModule } from './modules/telemetry/telemetry.module';
 import { MaterialsModule } from './modules/materials/materials.module';
 import { JobsModule } from './modules/jobs/jobs.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { JobsModule } from './modules/jobs/jobs.module';
     TelemetryModule,
     MaterialsModule,
     JobsModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [AppService],
